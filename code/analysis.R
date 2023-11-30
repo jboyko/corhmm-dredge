@@ -53,7 +53,7 @@ plot_data_long <- pivot_longer(as.data.frame(plot_data), cols = everything())
 plot_data_long <- data.frame(do.call(rbind, strsplit(plot_data_long$name, "_")), value = plot_data_long$value)
 colnames(plot_data_long) <- c("trans", "type", "value")
 
-ggplot(data = plot_data_long, aes(x = ))
+ggplot(data = plot_data_long, aes(x = type, y = value))
 
 ############### Simulation scenario 2 ####################
 
