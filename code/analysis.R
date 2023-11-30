@@ -3,6 +3,10 @@ setwd("~/corhmm-dredge/")
 library(corHMM)
 library(parallel)
 library(MASS)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
 source("code/utils.R")
 
 trees <- lapply(dir("trees/", full.names = TRUE), read.tree)
@@ -45,4 +49,11 @@ rmse = sqrt(colMeans((plot_data - cbind(par_table,par_table))^2))
 
 print(t(data.frame(bias, varr, mse, rmse)))
 
+plot_data_long <- pivot_longer(as.data.frame(plot_data), cols = everything())
+plot_data_long <- data.frame(do.call(rbind, strsplit(plot_data_long$name, "_")), value = plot_data_long$value)
+colnames(plot_data_long) <- c("trans", "type", "value")
+
+ggplot(data = plot_data_long, aes(x = ))
+
 ############### Simulation scenario 2 ####################
+

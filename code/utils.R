@@ -89,14 +89,10 @@ get_solution_from_res <- function(res){
 
 # Define the posterior distribution function
 log_posterior <- function(params, tree, data, rate.cat) {
-  q1_prior <- list(rate=1)
-  q2_prior <- list(rate=1)
-  q1 <- params[1]
-  q2 <- params[2]
-  lp_q1 <- dexp(q1, q1_prior$rate, log=TRUE)
-  lp_q2 <- dexp(q2, q2_prior$rate, log=TRUE)
+  q_prior <- list(rate=1)
+  lp_q <- dexp(params, q1_prior$rate, log=TRUE)
   lp_like <- corHMM(tree, data, rate.cat = rate.cat, model = "ARD", p = params, node.states = "none")$loglik
-  lp_posterior <- lp_q1 + lp_q2 + lp_like
+  lp_posterior <- sum(lp_q) + lp_like
   if(is.nan(lp_posterior)){
     lp_posterior <- -1e10
   } 
