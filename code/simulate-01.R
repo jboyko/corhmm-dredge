@@ -86,8 +86,8 @@ if(!file_found | overwrite){
   res_bayes <- mclapply(cor_dat, function(x) 
     MCMCmetrop1R(log_posterior, theta.init=rep(0.5, nPar), force.samp=TRUE,
                  optim.lower=rep(0, nPar), optim.method = "L-BFGS-B",
-                 mcmc=1000, burnin=10, verbose=TRUE, 
-                 tree=phy, data=cor_dat[[1]], rate.cat = 1, logfun=TRUE),
+                 mcmc=10000, burnin=500, verbose=TRUE, 
+                 tree=phy, data=x, rate.cat = 1, logfun=TRUE),
     mc.cores = mccores)
   saveRDS(res_bayes, file = paste0("res/", res_bayes_name))
 }else{
