@@ -6,6 +6,10 @@ library(parallel)
 library(MASS)
 source("code/utils.R")
 
+nSim = 100
+trees <- lapply(dir("trees/", full.names = TRUE), read.tree)
+phy <- trees[[1]]
+
 # creates an index mat appropriate for nchar, nstates, and nhidden
 index_mat <- get_index_mat(nChar=2, nStates=2, nRateClass=1)
 

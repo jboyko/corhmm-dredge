@@ -6,6 +6,10 @@ library(parallel)
 library(MASS)
 source("code/utils.R")
 
+nSim = 100
+trees <- lapply(dir("trees/", full.names = TRUE), read.tree)
+phy <- trees[[1]]
+
 # creates an index mat appropriate for nchar, nstates, and nhidden
 index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=1)
 
@@ -45,3 +49,4 @@ rmse = sqrt(colMeans((plot_data - 1)^2))
 t(data.frame(bias, varr, mse, rmse))
 
 boxplot(plot_data); abline(h = 1)
+
