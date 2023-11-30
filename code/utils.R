@@ -94,8 +94,9 @@ log_posterior <- function(params, tree, data, rate.cat){
   lp_like <- corHMM(tree, data, rate.cat = rate.cat, model = "ARD", p = params, node.states = "none")$loglik
   print(params)
   print(lp_like)
+  print(sum(lp_q))
   lp_posterior <- sum(lp_q) + lp_like
-  if(is.nan(lp_posterior)){
+  if(is.nan(lp_posterior) | lp_posterior < -1e10){
     lp_posterior <- -1e10
   } 
   return(lp_posterior)
