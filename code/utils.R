@@ -89,7 +89,7 @@ get_solution_from_res <- function(res){
 
 # Define the posterior distribution function
 log_posterior <- function(params, tree, data, rate.cat){
-  if(any(params >= 0)){
+  if(any(params <= 0)){
     lp_posterior <- -1e10
     return(lp_posterior)
   }
