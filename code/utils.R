@@ -88,15 +88,15 @@ get_solution_from_res <- function(res){
 }
 
 # Define the posterior distribution function
-log_posterior <- function(params, tree, data, rate.cat){
+log_posterior <- function(params, tree, data, rate.cat, rate.mat){
   q_prior <- list(rate=0.1)
   lp_q <- dexp(params, q_prior$rate, log=TRUE)
-  lp_like <- corHMM(tree, data, rate.cat = rate.cat, model = "ARD", p = params, node.states = "none")$loglik
+  lp_like <- corHMM(tree, data, rate.cat = rate.cat, rate.mat=rate.mat, p = params, node.states = "none")$loglik
   print(params)
   print(lp_like)
   print(sum(lp_q))
   lp_posterior <- sum(lp_q) + lp_like
-  if(is.nan(lp_posterior) | lp_posterior < -1e10){
+  if(is.nan(lp_posterior) | lp_posterior < -1e6){
     lp_posterior <- -1e10
   } 
   return(lp_posterior)
