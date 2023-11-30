@@ -69,7 +69,7 @@ if(!file_found | overwrite){
 file_found <- res_reg_name %in% dir("res/")
 if(!file_found | overwrite){
   res_reg <- mclapply(cor_dat, function(x) 
-    corHMM:::corHMMDredge(phy, x, 1, pen_type = "logl1"), 
+    corHMM:::corHMMDredge(phy, x, 1, pen_type = "log_exp"), 
     mc.cores = mccores)
   saveRDS(res_reg, file = paste0("res/", res_reg_name))
 }else{

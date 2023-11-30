@@ -42,7 +42,7 @@ df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
 df_bayes <- do.call(rbind, lapply(res_bayes, function(x) summary(x)$quantiles[,3]))
 
 plot_data <- (cbind(df_unreg, df_reg, df_bayes))
-colnames(plot_data) <- c("01_unreg", "10_unreg", "01_reg", "10_reg", "01_bayes", "10_bayes")
+colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg", "-bayes"), each = 2))
 
 bias = colMeans(plot_data - cbind(par_table, par_table, par_table))
 varr = apply(plot_data, 2, var)
@@ -52,7 +52,7 @@ rmse = sqrt(colMeans((plot_data - cbind(par_table,par_table, par_table))^2))
 print(t(data.frame(bias, varr, mse, rmse)))
 
 plot_data_long <- pivot_longer(as.data.frame(plot_data), cols = everything())
-plot_data_long <- data.frame(do.call(rbind, strsplit(plot_data_long$name, "_")), value = plot_data_long$value)
+plot_data_long <- data.frame(do.call(rbind, strsplit(plot_data_long$name, "-")), value = plot_data_long$value)
 colnames(plot_data_long) <- c("trans", "type", "value")
 
 ggplot(data = plot_data_long, aes(x = type, y = log(value))) +
