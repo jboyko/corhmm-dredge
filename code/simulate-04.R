@@ -1,4 +1,4 @@
-# simple 4 character simulation with binary states
+# simple 3 character simulation with binary states
 setwd("~/corhmm-dredge/")
 
 library(corHMM)
@@ -24,7 +24,7 @@ res_reg_name <- paste0("res_reg-", simulation, ".RDS")
 res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
 
 # creates an index mat appropriate for nchar, nstates, and nhidden
-index_mat <- get_index_mat(nChar=4, nStates=2, nRateClass=1)
+index_mat <- get_index_mat(nChar=3, nStates=2, nRateClass=1)
 
 # samples the possible parameter values 
 # parameter table generation

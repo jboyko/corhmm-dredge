@@ -72,6 +72,10 @@ if(!file_found | overwrite){
   res_reg <- readRDS(paste0("res/", res_reg_name))
 }
 
+res_unreg <- res_unreg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4))]
+res_reg <- res_reg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4))]
+par_table <- par_table[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4)), ]
+
 df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
 df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
 

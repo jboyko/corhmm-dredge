@@ -92,6 +92,9 @@ if(!file_found | overwrite){
 
 supp_hmm <- which((unlist(lapply(res_unreg_b, function(x) x$AICc)) - unlist(lapply(res_unreg, function(x) x$AICc)))>0)
 
+res_unreg <- res_unreg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 2))]
+res_reg <- res_reg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 2))]
+par_table <- par_table[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 2)), ]
 
 df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
 df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
