@@ -53,7 +53,7 @@ get_rate_mats <- function(index_mat, par_table){
     for(j in 1:length(pars)){
       par_index <- which(rate_index_mat == j, arr.ind = TRUE)
       for(k in 1:nrow(par_index)){
-        rate_mat[par_index[k,1], par_index[k,2]] <- pars[j]
+        rate_mat[par_index[k,1], par_index[k,2]] <- unlist(pars[j])
       }
     }
     diag(rate_mat) <- -rowSums(rate_mat)
