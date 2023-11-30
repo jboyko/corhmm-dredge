@@ -83,6 +83,7 @@ par_table <- par_table[unlist(lapply(full_dat, function(x) length(table(x$TipSta
 df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
 df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
 
+plot_data <- (cbind(df_unreg, df_reg))
 bias = colMeans(plot_data - cbind(par_table, par_table))
 varr = apply(plot_data, 2, var)
 mse = colMeans((plot_data - cbind(par_table, par_table))^2)
