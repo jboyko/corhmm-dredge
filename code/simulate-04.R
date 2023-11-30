@@ -7,7 +7,7 @@ library(MASS)
 source("code/utils.R")
 
 nSim <- 100
-mccores <- 10
+mccores <- 40
 
 trees <- lapply(dir("trees/", full.names = TRUE), read.tree)
 phy <- trees[[1]]
