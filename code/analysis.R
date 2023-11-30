@@ -19,6 +19,7 @@ full_dat_name <- paste0("full_data-", simulation, ".RDS")
 cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
 res_reg_name <- paste0("res_reg-", simulation, ".RDS")
 res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
+res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
 
 # load everything
 index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=1)

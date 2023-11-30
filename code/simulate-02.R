@@ -9,7 +9,7 @@ library(MCMCpack)
 source("code/utils.R")
 
 nSim <- 100
-mccores <- 40
+mccores <- 60
 
 trees <- lapply(dir("trees/", full.names = TRUE), read.tree)
 phy <- trees[[1]]
