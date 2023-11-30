@@ -57,6 +57,7 @@ colnames(plot_data_long) <- c("trans", "type", "value")
 
 ggplot(data = plot_data_long, aes(x = type, y = log(value))) +
   geom_boxplot() +
+  theme_minimal() +
   facet_wrap(~trans)
 
 ############### Simulation scenario 2 ####################
