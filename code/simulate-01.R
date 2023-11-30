@@ -4,6 +4,8 @@ setwd("~/corhmm-dredge/")
 library(corHMM)
 library(parallel)
 library(MASS)
+library(MCMCpack)
+
 source("code/utils.R")
 
 nSim <- 100
