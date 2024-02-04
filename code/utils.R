@@ -81,9 +81,33 @@ get_formatted_data <- function(dat, index_mat){
   return(cor_dat)
 }
 
-get_solution_from_res <- function(res){
-  p <- sapply(1:max(res$index.mat, na.rm = TRUE), function(x) 
-    na.omit(c(res$solution))[na.omit(c(res$index.mat) == x)][1])
+get_solution_from_res <- function(res, index.mat = NULL){
+  if(class(res) == "mcmc"){
+    tmp <- summary(res)$quantiles
+    p <- tmp[,3]
+  }
+  if(class(res) == "try-error"){
+    p <- NA
+  }
+  if(class(res) == "corhmm"){
+    if(!is.null(index.mat)){
+      if(dim(index.mat)[1] == dim(res$index.mat)[1]){
+        p <- sapply(1:max(res$index.mat, na.rm = TRUE), function(x) 
+          na.omit(c(res$solution))[na.omit(c(res$index.mat) == x)][1])
+      }else{
+        p <- NA
+      }
+    }else{
+      p <- sapply(1:max(res$index.mat, na.rm = TRUE), function(x) 
+        na.omit(c(res$solution))[na.omit(c(res$index.mat) == x)][1])
+    }
+  }
+  return(p)
+}
+
+get_par_from_rate_mat <- function(dat, index_mat){
+  p <- sapply(1:max(index_mat$rate_mat, na.rm = TRUE), function(x) 
+    na.omit(c(dat$par))[na.omit(c(index_mat$rate_mat) == x)][1])
   return(p)
 }
 

@@ -23,7 +23,7 @@ full_dat_name <- paste0("full_data-", simulation, ".RDS")
 cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
 res_reg_name <- paste0("res_reg-", simulation, ".RDS")
 res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
-res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
+# res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
 
 # load everything
 index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=1)
@@ -32,22 +32,101 @@ par_table <- read.csv(paste0("parameter_tables/", par_table_name))
 colnames(par_table) <- colnames(tmp)
 rate_mats <- get_rate_mats(index_mat, par_table)
 full_dat <- readRDS(paste0("data/", full_dat_name))
+cor_dat <- lapply(full_dat, "[[", "cor_dat")
+res_unreg <- readRDS(paste0("res/", res_unreg_name))
+res_reg <- readRDS(paste0("res/", res_reg_name))
+# res_bayes <- readRDS(paste0("res/", res_bayes_name))
+
+# format data and compare results
+df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
+df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
+df_true <- do.call(rbind, lapply(full_dat, function(x) get_par_from_rate_mat(x, index_mat)))
+# df_bayes <- do.call(rbind, lapply(res_bayes, get_solution_from_res))
+
+par(mfrow=c(2,2))
+plot(log(df_true[,1]), log(df_unreg[,1]))
+abline(coef = c(0,1), col = "red")
+plot(df_true[,2], df_unreg[,2])
+plot(log(df_true[,1]), log(df_reg[,1]))
+abline(coef = c(0,1), col = "red")
+plot(df_true[,2], df_reg[,2])
+dev.off()
+
+# plot_data <- (cbind(df_unreg, df_reg, df_bayes))
+# colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg", "-bayes"), each = 2))
+
+plot_data <- (cbind(df_unreg, df_reg))
+colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg"), each = 2))
+
+bias = colMeans(plot_data - cbind(df_true, df_true), na.rm = TRUE)
+varr = apply(plot_data - cbind(df_true, df_true), 2, function(x) var(x, na.rm = TRUE))
+mse = colMeans((plot_data - cbind(df_true, df_true))^2, na.rm = TRUE)
+rmse = sqrt(colMeans((plot_data - cbind(df_true,df_true))^2, na.rm = TRUE))
+
+print((data.frame(bias, varr, mse, rmse)))
+
+plot_data_long <- pivot_longer(as.data.frame(plot_data), cols = everything())
+plot_data_long <- data.frame(do.call(rbind, strsplit(plot_data_long$name, "-")), value = plot_data_long$value)
+colnames(plot_data_long) <- c("trans", "type", "value")
+
+ggplot(data = plot_data_long, aes(x = type, y = log(value))) +
+  geom_boxplot() +
+  theme_minimal() +
+  facet_wrap(~trans)
+
+# ASR COMPARISON
+max_states_unreg <- lapply(res_unreg, function(x) apply(x$states, 1, which.max))
+max_states_reg <- lapply(res_reg, function(x) apply(x$states, 1, which.max))
+true_states <- lapply(full_dat, function(x) x$dat$NodeStates)
+
+table(mapply(function(x, y) x == y, x = max_states_unreg, y = true_states))
+table(mapply(function(x, y) x == y, x = max_states_reg, y = true_states))
+
+############### Simulation scenario 2 ####################
+# which simulation number
+simulation <- "02"
+
+# the various file names
+par_table_name <- paste0("par_table-", simulation, ".csv")
+full_dat_name <- paste0("full_data-", simulation, ".RDS")
+cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
+res_reg_name <- paste0("res_reg-", simulation, ".RDS")
+res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
+# res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
+
+# load everything
+index_mat <- get_index_mat(nChar=2, nStates=2, nRateClass=1)
+tmp <- get_par_table(index_mat, nSim, mean = 0, sd = 0.25)  
+par_table <- read.csv(paste0("parameter_tables/", par_table_name))
+colnames(par_table) <- colnames(tmp)
+rate_mats <- get_rate_mats(index_mat, par_table)
+full_dat <- readRDS(paste0("data/", full_dat_name))
 cor_dat <- lapply(full_dat, function(x) get_formatted_data(x, index_mat))
 res_unreg <- readRDS(paste0("res/", res_unreg_name))
 res_reg <- readRDS(paste0("res/", res_reg_name))
-res_bayes <- readRDS(paste0("res/", res_bayes_name))
+# res_bayes <- readRDS(paste0("res/", res_bayes_name))
 
 df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
 df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
-df_bayes <- do.call(rbind, lapply(res_bayes, function(x) summary(x)$quantiles[,3]))
+# df_bayes <- do.call(rbind, lapply(res_bayes, get_solution_from_res))
 
-plot_data <- (cbind(df_unreg, df_reg, df_bayes))
-colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg", "-bayes"), each = 2))
+max_states_unreg <- lapply(res_unreg, function(x) apply(x$states, 1, which.max))
+max_states_reg <- lapply(res_reg, function(x) apply(x$states, 1, which.max))
+true_states <- lapply(full_dat, "[[", "NodeStates")
 
-bias = colMeans(plot_data - cbind(par_table, par_table, par_table))
-varr = apply(plot_data, 2, var)
-mse = colMeans((plot_data - cbind(par_table, par_table, par_table))^2)
-rmse = sqrt(colMeans((plot_data - cbind(par_table,par_table, par_table))^2))
+table(mapply(function(x, y) x == y, x = max_states_unreg, y = true_states))
+table(mapply(function(x, y) x == y, x = max_states_reg, y = true_states))
+
+# plot_data <- (cbind(df_unreg, df_reg, df_bayes))
+# colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg", "-bayes"), each = length(colnames(tmp))))
+
+plot_data <- (cbind(df_unreg, df_reg))
+colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg"), each = length(colnames(tmp))))
+
+bias = colMeans(plot_data - cbind(par_table, par_table), na.rm = TRUE)
+varr = apply(plot_data, 2, function(x) var(x, na.rm = TRUE))
+mse = colMeans((plot_data - cbind(par_table, par_table))^2, na.rm = TRUE)
+rmse = sqrt(colMeans((plot_data - cbind(par_table,par_table))^2, na.rm = TRUE))
 
 print(t(data.frame(bias, varr, mse, rmse)))
 
@@ -60,9 +139,9 @@ ggplot(data = plot_data_long, aes(x = type, y = log(value))) +
   theme_minimal() +
   facet_wrap(~trans)
 
-############### Simulation scenario 2 ####################
+############### Simulation scenario 3 ####################
 # which simulation number
-simulation <- "02"
+simulation <- "03"
 
 # the various file names
 par_table_name <- paste0("par_table-", simulation, ".csv")
@@ -70,10 +149,10 @@ full_dat_name <- paste0("full_data-", simulation, ".RDS")
 cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
 res_reg_name <- paste0("res_reg-", simulation, ".RDS")
 res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
-res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
+# res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
 
 # load everything
-index_mat <- get_index_mat(nChar=2, nStates=2, nRateClass=1)
+index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=2)
 tmp <- get_par_table(index_mat, nSim, mean = 0, sd = 0.25)  
 par_table <- read.csv(paste0("parameter_tables/", par_table_name))
 colnames(par_table) <- colnames(tmp)
@@ -82,27 +161,98 @@ full_dat <- readRDS(paste0("data/", full_dat_name))
 cor_dat <- lapply(full_dat, function(x) get_formatted_data(x, index_mat))
 res_unreg <- readRDS(paste0("res/", res_unreg_name))
 res_reg <- readRDS(paste0("res/", res_reg_name))
-res_bayes <- readRDS(paste0("res/", res_bayes_name))
+# res_bayes <- readRDS(paste0("res/", res_bayes_name))
 
 df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
 df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
-df_bayes <- do.call(rbind, lapply(res_bayes, function(x) summary(x)$quantiles[,3]))
+# df_bayes <- do.call(rbind, lapply(res_bayes, get_solution_from_res))
 
-plot_data <- (cbind(df_unreg, df_reg, df_bayes))
-colnames(plot_data) <- c("01_unreg", "10_unreg", "01_reg", "10_reg", "01_bayes", "10_bayes")
+# plot_data <- (cbind(df_unreg, df_reg, df_bayes))
+# colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg", "-bayes"), each = length(colnames(tmp))))
 
-bias = colMeans(plot_data - cbind(par_table, par_table, par_table))
-varr = apply(plot_data, 2, var)
-mse = colMeans((plot_data - cbind(par_table, par_table, par_table))^2)
-rmse = sqrt(colMeans((plot_data - cbind(par_table,par_table, par_table))^2))
+plot_data <- (cbind(df_unreg, df_reg))
+colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg"), each = length(colnames(tmp))))
+
+bias = colMeans(plot_data - cbind(par_table, par_table), na.rm = TRUE)
+varr = apply(plot_data, 2, function(x) var(x, na.rm = TRUE))
+mse = colMeans((plot_data - cbind(par_table, par_table))^2, na.rm = TRUE)
+rmse = sqrt(colMeans((plot_data - cbind(par_table,par_table))^2, na.rm = TRUE))
 
 print(t(data.frame(bias, varr, mse, rmse)))
 
 plot_data_long <- pivot_longer(as.data.frame(plot_data), cols = everything())
-plot_data_long <- data.frame(do.call(rbind, strsplit(plot_data_long$name, "_")), value = plot_data_long$value)
+plot_data_long <- data.frame(do.call(rbind, strsplit(plot_data_long$name, "-")), value = plot_data_long$value)
 colnames(plot_data_long) <- c("trans", "type", "value")
 
 ggplot(data = plot_data_long, aes(x = type, y = log(value))) +
   geom_boxplot() +
+  theme_minimal() +
   facet_wrap(~trans)
+
+max_states_unreg <- lapply(res_unreg, function(x) apply(x$states, 1, which.max))
+max_states_reg <- lapply(res_reg, function(x) apply(x$states, 1, which.max))
+true_states <- lapply(full_dat, "[[", "NodeStates")
+
+table(mapply(function(x, y) x == y, x = max_states_unreg, y = true_states))
+table(mapply(function(x, y) x == y, x = max_states_reg, y = true_states))
+
+
+############### Simulation scenario 4 ####################
+# which simulation number
+simulation <- "04"
+
+# the various file names
+par_table_name <- paste0("par_table-", simulation, ".csv")
+full_dat_name <- paste0("full_data-", simulation, ".RDS")
+cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
+res_reg_name <- paste0("res_reg-", simulation, ".RDS")
+res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
+# res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
+
+# load everything
+index_mat <- get_index_mat(nChar=3, nStates=2, nRateClass=1)
+tmp <- get_par_table(index_mat, nSim, mean = 0, sd = 0.25)  
+par_table <- read.csv(paste0("parameter_tables/", par_table_name))
+colnames(par_table) <- colnames(tmp)
+rate_mats <- get_rate_mats(index_mat, par_table)
+full_dat <- readRDS(paste0("data/", full_dat_name))
+cor_dat <- lapply(full_dat, function(x) get_formatted_data(x, index_mat))
+res_unreg <- readRDS(paste0("res/", res_unreg_name))
+res_reg <- readRDS(paste0("res/", res_reg_name))
+# res_bayes <- readRDS(paste0("res/", res_bayes_name))
+
+df_unreg <- do.call(rbind, lapply(res_unreg, function(x) 
+  get_solution_from_res(x, index_mat$full_rate_mat)))
+df_reg <- do.call(rbind, lapply(res_reg, function(x) 
+  get_solution_from_res(x, index_mat$full_rate_mat)))
+# df_bayes <- do.call(rbind, lapply(res_bayes, get_solution_from_res))
+
+# plot_data <- (cbind(df_unreg, df_reg, df_bayes))
+# colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg", "-bayes"), each = length(colnames(tmp))))
+
+plot_data <- (cbind(df_unreg, df_reg))
+colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg"), each = length(colnames(tmp))))
+
+bias = colMeans(plot_data - cbind(par_table, par_table), na.rm = TRUE)
+varr = apply(plot_data, 2, function(x) var(x, na.rm = TRUE))
+mse = colMeans((plot_data - cbind(par_table, par_table))^2, na.rm = TRUE)
+rmse = sqrt(colMeans((plot_data - cbind(par_table,par_table))^2, na.rm = TRUE))
+
+print(t(data.frame(bias, varr, mse, rmse)))
+
+plot_data_long <- pivot_longer(as.data.frame(plot_data), cols = everything())
+plot_data_long <- data.frame(do.call(rbind, strsplit(plot_data_long$name, "-")), value = plot_data_long$value)
+colnames(plot_data_long) <- c("trans", "type", "value")
+
+ggplot(data = plot_data_long, aes(x = type, y = log(value))) +
+  geom_violin() +
+  theme_minimal() +
+  facet_wrap(~trans)
+
+max_states_unreg <- lapply(res_unreg, function(x) apply(x$states, 1, which.max))
+max_states_reg <- lapply(res_reg, function(x) apply(x$states, 1, which.max))
+true_states <- lapply(full_dat, "[[", "NodeStates")
+
+table(mapply(function(x, y) x == y, x = max_states_unreg, y = true_states))
+table(mapply(function(x, y) x == y, x = max_states_reg, y = true_states))
 
