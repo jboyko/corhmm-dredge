@@ -38,11 +38,12 @@ full_dat <- readRDS(paste0("data/", full_dat_name))
 cor_dat <- lapply(full_dat, "[[", "cor_dat")
 
 # load results
-all_res <- lapply(sim_res_files, readRDS)
-names(all_res) <- gsub(".*_", "", sim_res_files) %>% gsub(".RDS", "", .)
-
+res_list <- lapply(sim_res_files, readRDS)
+names(res_list) <- gsub(".*_", "", sim_res_files) %>% gsub(".RDS", "", .)
 
 # format data and compare results
+df_unreg <- do.call(rbind, lapply(res_list[[2]], get_solution_from_res))
+df_list <- lapply(res_list, function(x) do.call(rbind, lapply(x, get_solution_from_res)))
 df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
 df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
 df_true <- do.call(rbind, lapply(full_dat, function(x) get_par_from_rate_mat(x, index_mat)))
