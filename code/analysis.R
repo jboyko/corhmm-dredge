@@ -6,6 +6,7 @@ library(MASS)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(gghalves)
 
 source("code/utils.R")
 
@@ -42,101 +43,48 @@ res_list <- lapply(sim_res_files, readRDS)
 names(res_list) <- gsub(".*_", "", sim_res_files) %>% gsub(".RDS", "", .)
 
 # format data and compare results
-df_unreg <- do.call(rbind, lapply(res_list[[2]], get_solution_from_res))
 df_list <- lapply(res_list, function(x) do.call(rbind, lapply(x, get_solution_from_res)))
-df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
-df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
 df_true <- do.call(rbind, lapply(full_dat, function(x) get_par_from_rate_mat(x, index_mat)))
 ntips <- do.call(rbind, lapply(full_dat, function(x) length(x$phy$tip.label)))
 # df_bayes <- do.call(rbind, lapply(res_bayes, get_solution_from_res))
 
 df_true_long <- get_better_df(df_true, colnames(tmp), "true", ntips)
-df_unreg_long <- get_better_df(df_unreg, colnames(tmp), "unreg", ntips)
-df_reg_long <- get_better_df(df_reg, colnames(tmp), "reg", ntips)
+df_long_list <- list()
+for(i in 1:length(df_list)){
+  df_long_list[[i]] <- get_better_df(df_list[[i]], colnames(tmp), names(res_list)[i], ntips)
+  df_long_list[[i]]$diff <- df_long_list[[i]]$value - df_true_long$value
+}
 
-df_unreg_long$diff <- df_unreg_long$value - df_true_long$value
-df_reg_long$diff <- df_reg_long$value - df_true_long$value
-  
-# Calculate the differences between df_unreg and df_true
-# df_unreg_diff <- df_unreg %>%
-#   left_join(df_true, by = c("ntips", "par")) %>%
-#   mutate(diff_unreg = value.x - value.y)
+df_all <- do.call(rbind, df_long_list)
 
 # Calculate MSE and RMSE for df_reg_diff
-df_reg_summary <- df_reg_long %>%
-  group_by(par, ntips) %>%
+df_summary <- df_all %>%
+  group_by(ntips, type, par) %>%
   summarize(
-    mean_diff_reg = mean(diff),
-    var_diff_reg = var(diff),
-    mse_reg = mean(diff^2),  # Calculate MSE
-    rmse_reg = sqrt(mse_reg)     # Calculate RMSE
+    bias = mean(diff),
+    var = var(diff),
+    mse= mean(diff^2),  # Calculate MSE
+    rmse = sqrt(mse)     # Calculate RMSE
   )
 
-# Calculate MSE and RMSE for df_unreg_diff
-df_unreg_summary <- df_unreg_long %>%
-  group_by(par, ntips) %>%
-  summarize(
-    mean_diff_unreg = mean(diff),
-    var_diff_unreg = var(diff),
-    mse_unreg = mean(diff^2),  # Calculate MSE
-    rmse_unreg = sqrt(mse_unreg)     # Calculate RMSE
-  )
+print(df_summary)
 
-# Merge the summaries for df_reg and df_unreg
-comparison_summary <- df_reg_summary %>%
-  left_join(df_unreg_summary, by = c("par", "ntips"))
-
-print(comparison_summary)
+ggplot(df_all, aes(x = factor(par), y = diff, fill = type, color = type)) +
+  geom_violin() +
+  facet_grid(ntips~.) +
+  coord_cartesian(ylim=c(-5, 5))
 
 
+n=0.02
+ggplot(df_all, aes(x = factor(type), y = diff, color = type)) + 
+  geom_half_boxplot(center=TRUE, errorbar.draw=FALSE, width=0.75, nudge=n, outlier.colour = NA) +
+  geom_half_point(alpha = 0.25) +
+  geom_half_violin(side="r", nudge=n) +
+  coord_cartesian(ylim=c(-5,5)) +
+  facet_wrap(par~ntips) +
+  theme_bw()
 
-ggplot(df_reg_long, aes(x = value, fill = par)) +
-  geom_histogram(binwidth = 0.1, position = "identity", alpha = 0.5) +
-  facet_wrap(~par) +
-  labs(title = "Comparison of df_reg_long and df_unreg_long")
-
-ggplot(df_unreg_long, aes(x = value, fill = par)) +
-  geom_histogram(binwidth = 0.1, position = "identity", alpha = 0.5) +
-  facet_wrap(~par) +
-  labs(title = "Comparison of df_unreg_long and df_reg_long")
-
-# Perform t-test for each level of par
-t_test_results <- df_reg_long %>%
-  group_by(par) %>%
-  summarize(p_value = t.test(value, df_unreg_long$value)$p.value)
-
-
-
-par(mfrow=c(2,2))
-plot(log(df_true[,1]), log(df_unreg[,1]))
-abline(coef = c(0,1), col = "red")
-plot(df_true[,2], df_unreg[,2])
-plot(log(df_true[,1]), log(df_reg[,1]))
-abline(coef = c(0,1), col = "red")
-plot(df_true[,2], df_reg[,2])
-dev.off()
-
-# plot_data <- (cbind(df_unreg, df_reg, df_bayes))
-# colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg", "-bayes"), each = 2))
-
-plot_data <- (cbind(df_unreg, df_reg))
-colnames(plot_data) <- paste0(colnames(tmp), rep(c("-unreg", "-reg"), each = 2))
-
-bias = colMeans(plot_data - cbind(df_true, df_true), na.rm = TRUE)
-varr = apply(plot_data - cbind(df_true, df_true), 2, function(x) var(x, na.rm = TRUE))
-mse = colMeans((plot_data - cbind(df_true, df_true))^2, na.rm = TRUE)
-rmse = sqrt(colMeans((plot_data - cbind(df_true,df_true))^2, na.rm = TRUE))
-
-print((data.frame(bias, varr, mse, rmse)))
-
-plot_data_long <- pivot_longer(as.data.frame(plot_data), cols = everything())
-plot_data_long <- data.frame(do.call(rbind, strsplit(plot_data_long$name, "-")), value = plot_data_long$value)
-colnames(plot_data_long) <- c("trans", "type", "value")
-
-ggplot(data = plot_data_long, aes(x = type, y = log(value))) +
-  geom_boxplot() +
-  theme_minimal() +
-  facet_wrap(~trans)
+ggsave("plots/plot_01.pdf")
 
 # ASR COMPARISON
 max_states_unreg <- lapply(res_unreg, function(x) apply(x$states, 1, which.max))
