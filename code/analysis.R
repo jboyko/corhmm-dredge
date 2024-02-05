@@ -21,8 +21,11 @@ simulation <- "01"
 par_table_name <- paste0("par_table-", simulation, ".csv")
 full_dat_name <- paste0("full_data-", simulation, ".RDS")
 cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
-res_reg_name <- paste0("res_reg-", simulation, ".RDS")
-res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
+
+sim_res_files <- dir("res/", full.names = TRUE)[grep(paste0("res", simulation, "_"), dir("res/"))]
+
+# res_reg_name <- paste0("res_reg-", simulation, ".RDS")
+# res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
 # res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
 
 # load everything
@@ -33,15 +36,75 @@ colnames(par_table) <- colnames(tmp)
 rate_mats <- get_rate_mats(index_mat, par_table)
 full_dat <- readRDS(paste0("data/", full_dat_name))
 cor_dat <- lapply(full_dat, "[[", "cor_dat")
-res_unreg <- readRDS(paste0("res/", res_unreg_name))
-res_reg <- readRDS(paste0("res/", res_reg_name))
-# res_bayes <- readRDS(paste0("res/", res_bayes_name))
+
+# load results
+all_res <- lapply(sim_res_files, readRDS)
+names(all_res) <- gsub(".*_", "", sim_res_files) %>% gsub(".RDS", "", .)
+
 
 # format data and compare results
 df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
 df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
 df_true <- do.call(rbind, lapply(full_dat, function(x) get_par_from_rate_mat(x, index_mat)))
+ntips <- do.call(rbind, lapply(full_dat, function(x) length(x$phy$tip.label)))
 # df_bayes <- do.call(rbind, lapply(res_bayes, get_solution_from_res))
+
+df_true_long <- get_better_df(df_true, colnames(tmp), "true", ntips)
+df_unreg_long <- get_better_df(df_unreg, colnames(tmp), "unreg", ntips)
+df_reg_long <- get_better_df(df_reg, colnames(tmp), "reg", ntips)
+
+df_unreg_long$diff <- df_unreg_long$value - df_true_long$value
+df_reg_long$diff <- df_reg_long$value - df_true_long$value
+  
+# Calculate the differences between df_unreg and df_true
+# df_unreg_diff <- df_unreg %>%
+#   left_join(df_true, by = c("ntips", "par")) %>%
+#   mutate(diff_unreg = value.x - value.y)
+
+# Calculate MSE and RMSE for df_reg_diff
+df_reg_summary <- df_reg_long %>%
+  group_by(par, ntips) %>%
+  summarize(
+    mean_diff_reg = mean(diff),
+    var_diff_reg = var(diff),
+    mse_reg = mean(diff^2),  # Calculate MSE
+    rmse_reg = sqrt(mse_reg)     # Calculate RMSE
+  )
+
+# Calculate MSE and RMSE for df_unreg_diff
+df_unreg_summary <- df_unreg_long %>%
+  group_by(par, ntips) %>%
+  summarize(
+    mean_diff_unreg = mean(diff),
+    var_diff_unreg = var(diff),
+    mse_unreg = mean(diff^2),  # Calculate MSE
+    rmse_unreg = sqrt(mse_unreg)     # Calculate RMSE
+  )
+
+# Merge the summaries for df_reg and df_unreg
+comparison_summary <- df_reg_summary %>%
+  left_join(df_unreg_summary, by = c("par", "ntips"))
+
+print(comparison_summary)
+
+
+
+ggplot(df_reg_long, aes(x = value, fill = par)) +
+  geom_histogram(binwidth = 0.1, position = "identity", alpha = 0.5) +
+  facet_wrap(~par) +
+  labs(title = "Comparison of df_reg_long and df_unreg_long")
+
+ggplot(df_unreg_long, aes(x = value, fill = par)) +
+  geom_histogram(binwidth = 0.1, position = "identity", alpha = 0.5) +
+  facet_wrap(~par) +
+  labs(title = "Comparison of df_unreg_long and df_reg_long")
+
+# Perform t-test for each level of par
+t_test_results <- df_reg_long %>%
+  group_by(par) %>%
+  summarize(p_value = t.test(value, df_unreg_long$value)$p.value)
+
+
 
 par(mfrow=c(2,2))
 plot(log(df_true[,1]), log(df_unreg[,1]))

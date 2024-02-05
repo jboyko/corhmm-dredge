@@ -125,3 +125,13 @@ log_posterior <- function(params, tree, data, rate.cat, rate.mat){
   } 
   return(lp_posterior)
 }
+
+get_better_df <- function(df, col_nm, type, ntips){
+  df <- as.data.frame(df)
+  colnames(df) <- col_nm
+  df <- cbind(ntips = ntips, type = type, df)
+  df_longer <- df %>%
+    pivot_longer(cols = col_nm, names_to = "par", values_to = "value")
+  return(df_longer)
+}
+

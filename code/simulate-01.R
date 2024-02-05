@@ -25,9 +25,6 @@ overwrite <- FALSE
 par_table_name <- paste0("par_table-", simulation, ".csv")
 full_dat_name <- paste0("full_data-", simulation, ".RDS")
 cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
-res_reg_name <- paste0("res_reg-", simulation, ".RDS")
-res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
-res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
 
 # creates an index mat appropriate for nchar, nstates, and nhidden
 index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=1)
@@ -73,18 +70,19 @@ if(!file_found | overwrite){
   full_dat <- readRDS(paste0("data/", full_dat_name))
 }
 
-###### ###### ###### ###### model fitting ###### ###### ###### ###### 
-file_found <- res_unreg_name %in% dir("res/")
+###### ###### ###### ###### model fitting ###### ###### ###### ######
+file_name <- "res01_unreg.RDS"
+file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
   res_unreg <- mclapply(full_dat, function(x) 
     corHMM(x$phy, x$cor_dat, 1), 
     mc.cores = mccores)
-  saveRDS(res_unreg, file = paste0("res/", res_unreg_name))
+  saveRDS(res_unreg, file = paste0("res/", file_name))
 }else{
-  res_unreg <- readRDS(paste0("res/", res_unreg_name))
+  res_unreg <- readRDS(paste0("res/", file_name))
 }
 
-file_name <- "res_reg-l1-01.RDS"
+file_name <- "res01_reg-l1.RDS"
 file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
   res_reg <- mclapply(full_dat, function(x) 
@@ -95,7 +93,18 @@ if(!file_found | overwrite){
   res_reg <- readRDS(paste0("res/", file_name))
 }
 
-file_name <- "res_reg-l2-01.RDS"
+file_name <- "res01_reg-logl1.RDS"
+file_found <- file_name %in% dir("res/")
+if(!file_found | overwrite){
+  res_reg <- mclapply(full_dat, function(x) 
+    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "logl1"), 
+    mc.cores = mccores)
+  saveRDS(res_reg, file = paste0("res/", file_name))
+}else{
+  res_reg <- readRDS(paste0("res/", file_name))
+}
+
+file_name <- "res01_reg-l2.RDS"
 file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
   res_reg <- mclapply(full_dat, function(x) 
@@ -106,7 +115,7 @@ if(!file_found | overwrite){
   res_reg <- readRDS(paste0("res/", file_name))
 }
 
-file_name <- "res_reg-log_exp-01.RDS"
+file_name <- "res01_reg-logexp.RDS"
 file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
   res_reg <- mclapply(full_dat, function(x) 
@@ -132,15 +141,15 @@ if(!file_found | overwrite){
 # }
 
 ###### ###### ###### ###### summarization ###### ###### ###### ###### 
-df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
-df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
-
-plot_data <- (cbind(df_unreg, df_reg))
-colnames(plot_data) <- c("01_unreg", "10_unreg", "01_reg", "10_reg")
-
-bias = colMeans(plot_data) - 1
-varr = apply(plot_data, 2, var)
-mse = colMeans((plot_data - 1)^2)
-rmse = sqrt(colMeans((plot_data - 1)^2))
-
-print(t(data.frame(bias, varr, mse, rmse)))
+# df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
+# df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
+# 
+# plot_data <- (cbind(df_unreg, df_reg))
+# colnames(plot_data) <- c("01_unreg", "10_unreg", "01_reg", "10_reg")
+# 
+# bias = colMeans(plot_data) - 1
+# varr = apply(plot_data, 2, var)
+# mse = colMeans((plot_data - 1)^2)
+# rmse = sqrt(colMeans((plot_data - 1)^2))
+# 
+# print(t(data.frame(bias, varr, mse, rmse)))
