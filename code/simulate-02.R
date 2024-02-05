@@ -26,9 +26,6 @@ overwrite <- FALSE
 par_table_name <- paste0("par_table-", simulation, ".csv")
 full_dat_name <- paste0("full_data-", simulation, ".RDS")
 cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
-res_reg_name <- paste0("res_reg-", simulation, ".RDS")
-res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
-res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
 
 # creates an index mat appropriate for nchar, nstates, and nhidden
 index_mat <- get_index_mat(nChar=2, nStates=2, nRateClass=1)
@@ -46,67 +43,103 @@ if(!file_found | overwrite){
 # creates a list of rate matrices for simulation
 rate_mats <- get_rate_mats(index_mat, par_table)
 
+# let's create the full data strucutre now.
+# a list with phy, sim pars, data
+full_dat <- list()
+count <- 1
+for(i in trees){
+  for(j in i){
+    for(k in rate_mats){
+      tmp <- list(phy = j, par = k, dat = NULL)
+      full_dat[[count]] <- tmp
+      count <- count+1
+    }
+  }
+}
+
 ###### ###### ###### ###### data simulation ###### ###### ###### ###### 
 file_found <- full_dat_name %in% dir("data/")
 if(!file_found | overwrite){
-  full_dat <- lapply(rate_mats, function(x) get_sim_data(phy, x, index_mat))
+  for(i in 1:length(full_dat)){
+    cat("\r", i, "out of", length(full_dat), "...    ")
+    full_dat[[i]]$dat <- get_sim_data(full_dat[[i]]$phy, full_dat[[i]]$par, index_mat)
+    full_dat[[i]]$cor_dat <- get_formatted_data(full_dat[[i]]$dat, index_mat)
+  }
   saveRDS(full_dat, file = paste0("data/", full_dat_name))
 }else{
   full_dat <- readRDS(paste0("data/", full_dat_name))
 }
 
-# format data
-cor_dat <- lapply(full_dat, function(x) get_formatted_data(x, index_mat))
-
 ###### ###### ###### ###### model fitting ###### ###### ###### ###### 
-file_found <- res_unreg_name %in% dir("res/")
+file_name <- "res02_unreg.RDS"
+file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
-  res_unreg <- mclapply(cor_dat, function(x) 
-    corHMM(phy, x, 1), 
+  res_unreg <- mclapply(full_dat, function(x) 
+    corHMM(x$phy, x$cor_dat, 1), 
     mc.cores = mccores)
-  saveRDS(res_unreg, file = paste0("res/", res_unreg_name))
+  saveRDS(res_unreg, file = paste0("res/", file_name))
 }else{
-  res_unreg <- readRDS(paste0("res/", res_unreg_name))
+  res_unreg <- readRDS(paste0("res/", file_name))
 }
 
-file_found <- res_reg_name %in% dir("res/")
+file_name <- "res02_reg-l1.RDS"
+file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
-  res_reg <- mclapply(cor_dat, function(x) 
-    corHMM:::corHMMDredge(phy, x, 1, pen_type = "logl1"), 
+  res_reg <- mclapply(full_dat, function(x) 
+    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l1"), 
     mc.cores = mccores)
-  saveRDS(res_reg, file = paste0("res/", res_reg_name))
+  saveRDS(res_reg, file = paste0("res/", file_name))
 }else{
-  res_reg <- readRDS(paste0("res/", res_reg_name))
+  res_reg <- readRDS(paste0("res/", file_name))
 }
 
-file_found <- res_bayes_name %in% dir("res/")
+file_name <- "res02_reg-logl1.RDS"
+file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
-  nPar <- max(index_mat$full_rate_mat)
-  res_bayes <- mclapply(cor_dat, function(x) 
-    MCMCmetrop1R(log_posterior, theta.init=rep(0.5, nPar), force.samp=TRUE,
-                 optim.lower=rep(0, nPar), optim.method = "L-BFGS-B",
-                 mcmc=10000, burnin=500, verbose=TRUE, logfun=TRUE,
-                 tree=phy, data=x, rate.cat = 1, rate.mat = index_mat$full_rate_mat),
-    mc.cores = mccores, mc.silent = FALSE)
-  saveRDS(res_bayes, file = paste0("res/", res_bayes_name))
+  res_reg <- mclapply(full_dat, function(x) 
+    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "logl1"), 
+    mc.cores = mccores)
+  saveRDS(res_reg, file = paste0("res/", file_name))
 }else{
-  res_bayes <- readRDS(paste0("res/", res_bayes_name))
+  res_reg <- readRDS(paste0("res/", file_name))
+}
+
+file_name <- "res02_reg-l2.RDS"
+file_found <- file_name %in% dir("res/")
+if(!file_found | overwrite){
+  res_reg <- mclapply(full_dat, function(x) 
+    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l2"), 
+    mc.cores = mccores)
+  saveRDS(res_reg, file = paste0("res/", file_name))
+}else{
+  res_reg <- readRDS(paste0("res/", file_name))
+}
+
+file_name <- "res02_reg-logexp.RDS"
+file_found <- file_name %in% dir("res/")
+if(!file_found | overwrite){
+  res_reg <- mclapply(full_dat, function(x) 
+    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "log_exp"), 
+    mc.cores = mccores)
+  saveRDS(res_reg, file = paste0("res/", file_name))
+}else{
+  res_reg <- readRDS(paste0("res/", file_name))
 }
 
 ###### ###### ###### ###### summarization ###### ###### ###### ###### 
-res_unreg <- res_unreg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4))]
-res_reg <- res_reg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4))]
-par_table <- par_table[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4)), ]
-
-df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
-df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
-
-plot_data <- (cbind(df_unreg, df_reg))
-colnames(plot_data) <- c("01_unreg", "10_unreg", "01_reg", "10_reg")
-
-bias = colMeans(plot_data) - 1
-varr = apply(plot_data, 2, var)
-mse = colMeans((plot_data - 1)^2)
-rmse = sqrt(colMeans((plot_data - 1)^2))
-
-print(t(data.frame(bias, varr, mse, rmse)))
+# res_unreg <- res_unreg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4))]
+# res_reg <- res_reg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4))]
+# par_table <- par_table[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4)), ]
+# 
+# df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
+# df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
+# 
+# plot_data <- (cbind(df_unreg, df_reg))
+# colnames(plot_data) <- c("01_unreg", "10_unreg", "01_reg", "10_reg")
+# 
+# bias = colMeans(plot_data) - 1
+# varr = apply(plot_data, 2, var)
+# mse = colMeans((plot_data - 1)^2)
+# rmse = sqrt(colMeans((plot_data - 1)^2))
+# 
+# print(t(data.frame(bias, varr, mse, rmse)))

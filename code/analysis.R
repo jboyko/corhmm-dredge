@@ -69,10 +69,12 @@ df_summary <- df_all %>%
 
 print(df_summary)
 
-ggplot(df_all, aes(x = factor(par), y = diff, fill = type, color = type)) +
-  geom_violin() +
-  facet_grid(ntips~.) +
-  coord_cartesian(ylim=c(-5, 5))
+write.csv(df_summary, file = "tables/table_01.csv", row.names = FALSE)
+
+# ggplot(df_all, aes(x = factor(par), y = diff, fill = type, color = type)) +
+#   geom_violin() +
+#   facet_grid(ntips~.) +
+#   coord_cartesian(ylim=c(-5, 5))
 
 
 n=0.02
