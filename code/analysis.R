@@ -30,7 +30,13 @@ sim_res_files <- dir("res/", full.names = TRUE)[grep(paste0("res", simulation, "
 # res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
 
 # load everything
-index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=1)
+if(simulation == "01"){
+  index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=1)
+}
+if(simulation == "02"){
+  index_mat <- get_index_mat(nChar=2, nStates=2, nRateClass=1)
+}
+
 tmp <- get_par_table(index_mat, nSim, mean = 0, sd = 0.25)  
 par_table <- read.csv(paste0("parameter_tables/", par_table_name))
 colnames(par_table) <- colnames(tmp)
@@ -56,6 +62,10 @@ for(i in 1:length(df_list)){
 }
 
 df_all <- do.call(rbind, df_long_list)
+convert_par_format <- function(par_value) {
+  gsub("\\((\\d)\\)_\\((\\d)\\)", "q[\\1][\\2]", par_value)
+}
+df_all$par <- sapply(df_all$par, convert_par_format)
 
 # Calculate MSE and RMSE for df_reg_diff
 df_summary <- df_all %>%
@@ -69,24 +79,39 @@ df_summary <- df_all %>%
 
 print(df_summary)
 
-write.csv(df_summary, file = "tables/table_01.csv", row.names = FALSE)
+# write.csv(df_summary, file = "tables/table_01.csv", row.names = FALSE)
+# write.csv(df_summary, file = "tables/table_02.csv", row.names = FALSE)
 
-# ggplot(df_all, aes(x = factor(par), y = diff, fill = type, color = type)) +
-#   geom_violin() +
-#   facet_grid(ntips~.) +
-#   coord_cartesian(ylim=c(-5, 5))
-
-
-n=0.02
 ggplot(df_all, aes(x = factor(type), y = diff, color = type)) + 
   geom_half_boxplot(center=TRUE, errorbar.draw=FALSE, width=0.75, nudge=n, outlier.colour = NA) +
-  geom_half_point(alpha = 0.25) +
-  geom_half_violin(side="r", nudge=n) +
+  geom_half_point(alpha = 0.25, position=position_dodge(width=0.75)) +
+  geom_half_violin(side="r", nudge=n, trim=FALSE, width=0.75, position=position_dodge(width=0.75)) +
   coord_cartesian(ylim=c(-5,5)) +
-  facet_wrap(par~ntips) +
-  theme_bw()
+  facet_grid(par~ntips, labeller = labeller(
+    par = label_parsed,   # Use label_parsed for mathematical expressions
+    ntips = label_parsed  # Use label_parsed for mathematical expressions
+  )) +
+  theme_minimal() +
+  theme(legend.position="bottom",
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_blank(),
+        strip.text.x = element_text(face = "bold", size = 12),
+        strip.text.y = element_text(face = "bold", size = 12, angle = 0)
+  ) +
+  labs(x = "Type", y = "Difference", color = "Type",
+       caption = "Source: Data Source Here") +
+  scale_color_brewer(palette = "Set1") # Use a color-blind friendly palette
 
-ggsave("plots/plot_01.pdf")
+
+# ggsave("plots/plot_01.pdf")
+# ggsave("plots/plot_02.pdf")
+
+# examining the likelihood surface of one sample
+focal_model <- which.max(df_list$`unreg`[,1])
+
+
+
+
 
 # ASR COMPARISON
 max_states_unreg <- lapply(res_unreg, function(x) apply(x$states, 1, which.max))
