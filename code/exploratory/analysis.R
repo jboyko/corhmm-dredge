@@ -107,10 +107,16 @@ ggplot(df_all, aes(x = factor(type), y = diff, color = type)) +
 # ggsave("plots/plot_02.pdf")
 
 # examining the likelihood surface of one sample
-focal_model <- which.max(df_list$`unreg`[,1])
+focal_model_index <- which.max(df_list$`unreg`[,2])
+df_true[focal_model_index,]
+l1_fit <- res_list$`reg-l1`[[focal_model_index]]
+unreg_fit <- res_list$unreg[[focal_model_index]]
+full_dat_tmp <- full_dat[[focal_model_index]]
 
-
-
+par(mfrow=c(1,3))
+plot_data_from_res(unreg_fit)
+plot_data_from_res(l1_fit)
+plot_data_from_full(full_dat_tmp)
 
 
 # ASR COMPARISON
