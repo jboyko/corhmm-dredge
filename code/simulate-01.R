@@ -75,7 +75,7 @@ file_name <- "res01_unreg.RDS"
 file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
   res_unreg <- mclapply(full_dat, function(x) 
-    corHMM(x$phy, x$cor_dat, 1), 
+    corHMM(x$phy, x$cor_dat, 1, root.p = "maddfitz"), 
     mc.cores = mccores)
   saveRDS(res_unreg, file = paste0("res/", file_name))
 }else{
@@ -86,18 +86,7 @@ file_name <- "res01_reg-l1.RDS"
 file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
   res_reg <- mclapply(full_dat, function(x) 
-    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l1"), 
-    mc.cores = mccores)
-  saveRDS(res_reg, file = paste0("res/", file_name))
-}else{
-  res_reg <- readRDS(paste0("res/", file_name))
-}
-
-file_name <- "res01_reg-logl1.RDS"
-file_found <- file_name %in% dir("res/")
-if(!file_found | overwrite){
-  res_reg <- mclapply(full_dat, function(x) 
-    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "logl1"), 
+    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l1", root.p = "maddfitz"), 
     mc.cores = mccores)
   saveRDS(res_reg, file = paste0("res/", file_name))
 }else{
@@ -108,18 +97,7 @@ file_name <- "res01_reg-l2.RDS"
 file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
   res_reg <- mclapply(full_dat, function(x) 
-    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l2"), 
-    mc.cores = mccores)
-  saveRDS(res_reg, file = paste0("res/", file_name))
-}else{
-  res_reg <- readRDS(paste0("res/", file_name))
-}
-
-file_name <- "res01_reg-logexp.RDS"
-file_found <- file_name %in% dir("res/")
-if(!file_found | overwrite){
-  res_reg <- mclapply(full_dat, function(x) 
-    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "log_exp"), 
+    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l2", root.p = "maddfitz"), 
     mc.cores = mccores)
   saveRDS(res_reg, file = paste0("res/", file_name))
 }else{

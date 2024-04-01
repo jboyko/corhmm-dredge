@@ -26,9 +26,6 @@ overwrite <- FALSE
 par_table_name <- paste0("par_table-", simulation, ".csv")
 full_dat_name <- paste0("full_data-", simulation, ".RDS")
 cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
-res_reg_name <- paste0("res_reg-", simulation, ".RDS")
-res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
-res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
 
 # creates an index mat appropriate for nchar, nstates, and nhidden
 index_mat <- get_index_mat(nChar=3, nStates=2, nRateClass=1)
@@ -62,55 +59,54 @@ if(!file_found | overwrite){
 cor_dat <- lapply(full_dat, function(x) get_formatted_data(x, index_mat))
 
 ###### ###### ###### ###### model fitting ###### ###### ###### ###### 
-file_found <- res_unreg_name %in% dir("res/")
+file_name <- "res04_unreg.RDS"
+file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
-  res_unreg <- mclapply(cor_dat, function(x) 
-    corHMM(phy, x, 1), 
+  res_unreg <- mclapply(full_dat, function(x) 
+    corHMM(x$phy, x$cor_dat, 1, root.p = "maddfitz"), 
     mc.cores = mccores)
-  saveRDS(res_unreg, file = paste0("res/", res_unreg_name))
+  saveRDS(res_unreg, file = paste0("res/", file_name))
 }else{
-  res_unreg <- readRDS(paste0("res/", res_unreg_name))
+  res_unreg <- readRDS(paste0("res/", file_name))
 }
 
-file_found <- res_reg_name %in% dir("res/")
+file_name <- "res04_reg-l1.RDS"
+file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
-  res_reg <- mclapply(cor_dat, function(x) 
-    corHMM:::corHMMDredge(phy, x, 1, pen_type = "logl1"), 
+  res_reg <- mclapply(full_dat, function(x) 
+    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l1", root.p = "maddfitz"), 
     mc.cores = mccores)
-  saveRDS(res_reg, file = paste0("res/", res_reg_name))
+  saveRDS(res_reg, file = paste0("res/", file_name))
 }else{
-  res_reg <- readRDS(paste0("res/", res_reg_name))
+  res_reg <- readRDS(paste0("res/", file_name))
 }
 
-file_found <- res_bayes_name %in% dir("res/")
+file_name <- "res04_reg-l2.RDS"
+file_found <- file_name %in% dir("res/")
 if(!file_found | overwrite){
-  nPar <- max(index_mat$full_rate_mat)
-  res_bayes <- mclapply(cor_dat, function(x) 
-    MCMCmetrop1R(log_posterior, theta.init=rep(0.5, nPar), force.samp=TRUE,
-                 optim.lower=rep(0, nPar), optim.method = "L-BFGS-B",
-                 mcmc=10000, burnin=500, verbose=TRUE, logfun=TRUE,
-                 tree=phy, data=x, rate.cat = 1, rate.mat = index_mat$full_rate_mat),
+  res_reg <- mclapply(full_dat, function(x) 
+    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l2", root.p = "maddfitz"), 
     mc.cores = mccores)
-  saveRDS(res_bayes, file = paste0("res/", res_bayes_name))
+  saveRDS(res_reg, file = paste0("res/", file_name))
 }else{
-  res_bayes <- readRDS(paste0("res/", res_bayes_name))
+  res_reg <- readRDS(paste0("res/", file_name))
 }
 
 ###### ###### ###### ###### summarization ###### ###### ###### ###### 
-res_unreg <- res_unreg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 8))]
-res_reg <- res_reg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 8))]
-par_table <- par_table[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 8)), ]
-
-df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
-df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
-
-plot_data <- (cbind(df_unreg, df_reg))
-bias = colMeans(plot_data - cbind(par_table, par_table))
-varr = apply(plot_data, 2, var)
-mse = colMeans((plot_data - cbind(par_table, par_table))^2)
-rmse = sqrt(colMeans((plot_data - cbind(par_table, par_table))^2))
-
-print(t(data.frame(bias, varr, mse, rmse)))
+# res_unreg <- res_unreg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 8))]
+# res_reg <- res_reg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 8))]
+# par_table <- par_table[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 8)), ]
+# 
+# df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
+# df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
+# 
+# plot_data <- (cbind(df_unreg, df_reg))
+# bias = colMeans(plot_data - cbind(par_table, par_table))
+# varr = apply(plot_data, 2, var)
+# mse = colMeans((plot_data - cbind(par_table, par_table))^2)
+# rmse = sqrt(colMeans((plot_data - cbind(par_table, par_table))^2))
+# 
+# print(t(data.frame(bias, varr, mse, rmse)))
 
 # boxplot(plot_data); abline(h = colMeans(par_table))
 
