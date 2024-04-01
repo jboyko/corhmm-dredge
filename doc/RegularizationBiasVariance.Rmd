@@ -1,0 +1,9 @@
+---
+title: "RegularizationBiasVariance"
+author: "James Boyko"
+date: "2024-04-01"
+output: html_document
+---
+
+## Bias and variance in discrete character evolution
+

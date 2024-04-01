@@ -1,0 +1,205 @@
+---
+title: "Regularization in Phylogenetic Comparative Discrete Character Models"
+author: "James Boyko"
+date: "2024-03-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Motivation for regularization
+
+As part of my development of corHMM Dredge, I became interested in ways to avoid over-fitting and ensuring well behaved likelihood surfaces. I was familiar with the concept of regularization from my work in machine learning, but had not seen it applied extensively in comparative methods (Khabbazian et al. 2016 being the exception). Thus, I set out to test the performance of regularization in discrete character models across a broad range of possible model structures. In this markdown I will compare regularized results to standard discrete character analysis in corHMM (Boyko and Beaulieu 2021). What I find is major improvements in ways that are expected (exchanging a slight bias for lower variance) and ways that are unexpected (a better behaved likelihood surface). It is not clear to me whether to classify discrete character models as ill-posed problems in the technical sense, but certainly some of the behaviour I demonstrate here is concerning. 
+
+One ancillary benefit or regularization is the downweighting of unreasonably high transition rates often found in empirical studies using discrete character models. Specifically, regularization ensures that high rates are heavily penalized and must have far superior likelihoods in order to be supported as the Maximum Regularized Likelihood Estimate (MRLE). I say regularized likelihood estimate since we are not finding the Maximum Likelihood Estimate (MLE) when using regularization. The MLE will find an unbiased estimate, whereas the RLE will find a downwardly biased estimate. However, the MRLE's variance is far lower than the MLE and it is precisely because of these runaway high rates that can result from low rate simulations. 
+
+Here I will demonstrate regularization's effect on discrete character evolution using corHMM. I utilize a tool in development (corHMM Dredge) to demonstrate the importance of regularization. As such the simulations done here will not be extensive and the analysis conducted will only be on a single empirical dataset (that of Pagel and Meade 2006). At this point in my research corHMM Dredge does not yet have an algorithm to search model structure space, but it does allow for penalty terms (l1 or l2 regularization). l1 regularization adds a penalty based on the absolute value of the parameter estimates and leads to sparser models with parameter estimates being encouraged to go to 0. l2 regularization is less harsh and adds a penalty term based on the square of the parameter estimates, encouraging smaller but not necessarily zero transition rates. 
+
+## Profile likelihoods in Pagel and Meade (2006)
+
+### Estimating the models
+
+```{r run, cache=TRUE}
+library(corHMM)
+data(primates)
+phy <- multi2di(primates[[1]])
+data <- primates[[2]]
+
+corhmm_fit <- corHMM(phy = phy, 
+                     data = data, 
+                     rate.cat = 1, 
+                     root.p="yang")
+
+corhmm_fit_l1 <- corHMM:::corHMMDredge(phy = phy, 
+                                       data = data, 
+                                       max.rate.cat = 1, 
+                                       pen_type = "l1", 
+                                       root.p="yang")
+
+corhmm_fit_l2 <- corHMM:::corHMMDredge(phy = phy, 
+                                       data = data, 
+                                       max.rate.cat = 1, 
+                                       pen_type = "l2", 
+                                       root.p="yang")
+```
+
+### Compare parameter estimates
+
+Below are all of the results of the parameter estimates for standard corHMM, l1 regularized corHMM, and l2 regularized corHMM. 
+
+The corHMM results represent the true MLE. 
+
+```{r}
+corhmm_fit$solution
+```
+
+As expected, the l1 regularized results have the lowest parameter estimates of the three.
+
+```{r}
+corhmm_fit_l1$solution
+```
+
+And the l2 results are in between l1 and the MLE. 
+
+```{r}
+corhmm_fit_l2$solution
+```
+
+What is clear is that the point estimates vary only slightly from one another. So why the need for regularization at all? If we examine the profile likelihoods of the parameter estimates of these models we will see that although the point estimates are relatively similar, the likelihood surfaces of unregularized corHMM are quite different from l1 or l2 regularization. Furthermore, within the 95% confidence intervals are values which will seem unreasonably high as a likelihood ridge forms for two of the 4 estimated parameters. 
+
+### Calculate profile likeihoods for the 4 estimated parameteres
+
+Here we are going to sample a factor of 10000 above and below the MLE for each parameters. We're only going to sample 20 points, but as you will see this will still demonstrate the value of regularization.
+
+```{r profile, cache=TRUE}
+corhmm_profile <- corHMM:::get_batch_profile_lik(corhmm_obj = corhmm_fit,
+                                                 range_factor = 10000,
+                                                 n_points = 20,
+                                                 ncores = 10,
+                                                 dredge = FALSE)
+
+l1_profile <- corHMM:::get_batch_profile_lik(corhmm_obj = corhmm_fit_l1,
+                                             range_factor = 10000,
+                                             n_points = 20,
+                                             ncores = 10,
+                                             dredge = TRUE)
+
+l2_profile <- corHMM:::get_batch_profile_lik(corhmm_obj = corhmm_fit_l2,
+                                             range_factor = 10000,
+                                             n_points = 20,
+                                             ncores = 10,
+                                             dredge = TRUE)
+
+```
+
+## Plot profile likeihoods for the 4 estimated parameteres
+
+In the plots below the dashed line is 1.92 likelihood units below the maximum likelihood estimate (or maximum regularized likelihood estimate). Anything parameter estimate with a likelihood estimate above this dashed line is within the 95% confidence interval. 
+
+```{r plot_batch, echo=FALSE, fig.width=8, fig.height=6}
+print("unregularized result")
+corHMM:::plot_batch_profile_lik(corhmm_profile, ylim = c(-55, -40))
+print("l1 regularized result")
+corHMM:::plot_batch_profile_lik(l1_profile, ylim = c(-55, -40))
+print("l2 regularized result")
+corHMM:::plot_batch_profile_lik(l2_profile, ylim = c(-55, -40))
+
+```
+
+Thus, even though we sampled a factor of 10000 above and below the point estimate (e.g., 0|1 -> 0|0 has an MLE of 0.057 transitions per million years and we sampled between 0.0000057 and 570 transitions per million years) there is a ridge of values greater than the MLE which lie above the dashed line and are therefore within the 95% confidence interval. 
+
+### Detailed examination of 0|1 -> 0|0
+
+This table shows the parameter value being fixed while all other transition rates are free to find the MLE. The lnLik estimate for the MLE is -41.90862 which means any estimate between that value and -43.82862 (MLE - 1.92) is within the 95% confidence intervals. As seen below this includes all estimates between 0.0348808 and 566.3863, and likely much higher than even that. 
+
+```{r}
+print("Maximum lnLik")
+print(corhmm_profile$corhmm_obj$loglik)
+print("Profile likelihood table")
+print(corhmm_profile$`0|1 -> 0|0`$profile_table)
+```
+
+As a further demonstration that this is not an error of the newly produced profile likelihood code, I will take the other rate estimates associated with 566.3863 and put them directly into corHMM.
+
+```{r}
+print("lnLik")
+corhmm_profile$`0|1 -> 0|0`$optim_res[[20]]$value
+print("Fixed parameter value for 0|1 -> 0|0")
+corhmm_profile$`0|1 -> 0|0`$profile_table[20,1]
+print("Optimized values of the remaining transition rates")
+exp(corhmm_profile$`0|1 -> 0|0`$optim_res[[20]]$par)
+print("corHMM fit with fixed parameters")
+p <- c(corhmm_profile$`0|1 -> 0|0`$profile_table[20,1], 
+       exp(corhmm_profile$`0|1 -> 0|0`$optim_res[[20]]$par))
+print(p)
+ridge_fit <- corHMM::corHMM(phy = phy, 
+               data = data, 
+               rate.cat = 1, 
+               root.p="yang",
+               p = p)
+```
+
+The values of this transition rate matrix are quite different from the MLE (which is what would usually be interpreted as a point estimate). But, these transition rates which lie along the ridge are well within the 1.92 likelihood units of the MLE. 
+
+```{r}
+print("Original MLE fit")
+corhmm_fit
+print("Parameter values from the ridge")
+ridge_fit
+```
+
+## Effect on ancestral state reconstruction
+
+Transition rates are not necessarily representative of the characters' histories. In fact, it is tempting to think that the reason that these characters are "free" (so to speak) to be range across factors of 1000 or more is because they don't actually occur in a typical character history. However, this is not the case for these models as I will show using stochastic mapping. Of course, the point estimates associated with the MLE will be as well behaved as any regularized model (though this is not guaranteed to be generally true, it is true for this dataset). The point of these simulations is to show that well within 95% confidence intervals are parameter estimates which would lead to wildly different interpretations. However, this is only the case for unregularized Markov models.
+
+*Note that I would run more extensive stochastic character simulations if the rates were not prohibitively fast. I mean this in the sense that the transition rates are so fast that is difficult for stochastic mapping code to even produce a single character history since there are so many transitions that need to be accounted for. 
+
+### Marginal reconstruction
+
+To begin with I will plot the marginal ancestral state reconstruction for the "ridge" model and the MLE model. 
+
+```{r}
+print("Original MLE fit")
+corhmm_fit
+par(mar=c(.1,.1,.1,.1))
+corHMM::plotRECON(corhmm_fit$phy, corhmm_fit$states, pie.cex = 1, show.tip.label = FALSE)
+```
+
+
+```{r}
+print("Parameter values from the ridge")
+ridge_fit
+par(mar=c(.1,.1,.1,.1))
+corHMM::plotRECON(ridge_fit$phy, ridge_fit$states, pie.cex = 1, show.tip.label = FALSE)
+```
+
+At first glance, it seems that some differences exist, but most interpretations from this graph would likely remain unchanged. However, any place where ancestral states were 0|0 or 0|1 are almost always 3/4 in favor of 0|0. This is because the information has decayed so rapidly (due to high rates) at those nodes that all that can be inferred is equilibrium frequencies (see Boyko and Beaulieu 2021). One can conclude that there is a great deal more uncertainty in the ridge plot than in the MLE and significantly less information from the tip states being used in the ridge ASR. 
+
+### Stochastic mapping and too many transitions
+
+Let's now examine explicit character histories. The above marginal reconstructions are useful for getting a sense of the decay of information, but not necessarily indicative of a "biological effect." Something which is more clear is a simulated character history which is an iteration of how a model such as this could produce the extant diversity we see today. 
+
+Below is the MLE point estimate. The character history is entirely reasonable and in my opinion, shows no signs to be concerned.
+
+```{r, cache=TRUE}
+model <- corhmm_fit$solution
+simmap_mle <- makeSimmap(tree=phy, data=data, model=model, rate.cat=1, nSim=1, nCores=1)
+phytools::plotSimmap(simmap_mle[[1]], fsize = 0.01, lwd = 4)
+```
+
+The story is entirely different for the ridge estimate. The character history is shows several places where the number of transitions is too high to count. And this is of course a genuine empirical dataset. That means, within the 95% confidence intervals of the MLE, is a parameter estimate which suggests 1000s of transitions between the presence and absence of multimale systems along several different lineages of primate. This is unreasonable to any biologist, but I stress is well within the possible explanations of the data if one uses an unregularized model. The reason the regularized model preforms so well is because of its favorable bias-variance trade-off and the effect of greater generalizabiliy on ancestral state reconstruction. I discuss this in further detail different vignette. 
+
+```{r, cache=TRUE}
+model <- ridge_fit$solution
+simmap_ridge <- makeSimmap(tree=phy, data=data, model=model, rate.cat=1, nSim=1, nCores=1, max.attempt = 100000)
+phytools::plotSimmap(simmap_ridge[[1]], fsize = 0.01, lwd = 4)
+```
+
+## Conclusion
+
+Parameter estimation is not a trivial matter. In phylogenetic comparative methods we base entire research programs on the outcomes of model fitting. And, though often ignored, uncertainty around our point estimates are important to consider. This can give us insight into how strong of an inference we should be drawing from our model. As Boyko and 0'Meara (2024) said: "Importantly, the biological interpretation of an extinction rate of certainly 0 will differ massively than if it were treated as possibly 0." Though we said extinction rate, we could have easily generalized the sentiment to say "a certain parameter estimate" versus "an uncertain parameter estimate." I have shown above how parameter uncertainty can massively influence biological interpretations of ancestral state reconstructions. This choice is made primarily because ASR depends entirely on the model being used for the reconstruction. And the model we choose to use has uncertainty around its estimate. Unfortunately, the Markov models used to date may have a great deal more uncertainty than has been previously appreciated. Nonetheless, I believe that regularization is a perfectly reasonable solution and that the slight bias is small price to pay well behaved likelihood surfaces and more certain parameter estimates. 
+
+
+
