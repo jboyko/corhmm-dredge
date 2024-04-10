@@ -105,7 +105,6 @@ print("l1 regularized result")
 corHMM:::plot_batch_profile_lik(l1_profile, ylim = c(-55, -40))
 print("l2 regularized result")
 corHMM:::plot_batch_profile_lik(l2_profile, ylim = c(-55, -40))
-
 ```
 
 Thus, even though we sampled a factor of 10000 above and below the point estimate (e.g., 0|1 -> 0|0 has an MLE of 0.057 transitions per million years and we sampled between 0.0000057 and 570 transitions per million years) there is a ridge of values greater than the MLE which lie above the dashed line and are therefore within the 95% confidence interval. 
@@ -114,7 +113,7 @@ Thus, even though we sampled a factor of 10000 above and below the point estimat
 
 This table shows the parameter value being fixed while all other transition rates are free to find the MLE. The lnLik estimate for the MLE is -41.90862 which means any estimate between that value and -43.82862 (MLE - 1.92) is within the 95% confidence intervals. As seen below this includes all estimates between 0.0348808 and 566.3863, and likely much higher than even that. 
 
-```{r}
+```{r, echo=FALSE}
 print("Maximum lnLik")
 print(corhmm_profile$corhmm_obj$loglik)
 print("Profile likelihood table")
@@ -123,7 +122,7 @@ print(corhmm_profile$`0|1 -> 0|0`$profile_table)
 
 As a further demonstration that this is not an error of the newly produced profile likelihood code, I will take the other rate estimates associated with 566.3863 and put them directly into corHMM.
 
-```{r}
+```{r, echo=FALSE}
 print("lnLik")
 corhmm_profile$`0|1 -> 0|0`$optim_res[[20]]$value
 print("Fixed parameter value for 0|1 -> 0|0")
@@ -134,6 +133,9 @@ print("corHMM fit with fixed parameters")
 p <- c(corhmm_profile$`0|1 -> 0|0`$profile_table[20,1], 
        exp(corhmm_profile$`0|1 -> 0|0`$optim_res[[20]]$par))
 print(p)
+```
+
+```{r}
 ridge_fit <- corHMM::corHMM(phy = phy, 
                data = data, 
                rate.cat = 1, 
@@ -196,6 +198,124 @@ model <- ridge_fit$solution
 simmap_ridge <- makeSimmap(tree=phy, data=data, model=model, rate.cat=1, nSim=1, nCores=1, max.attempt = 100000)
 phytools::plotSimmap(simmap_ridge[[1]], fsize = 0.01, lwd = 4)
 ```
+
+## Transition rates for unobserved states
+
+Next I will demonstrate was perhaps an even more exceptional result. This section is related to estimating rates when there are no unobserved instances of a state combination. For example, in the dataset we've been using thus far, there are no instances of the presence of estrus advertisement, when the mating system is monogamous (1|0 state combination). There has been some debate as to whether it is valid to estimate transition rates when the state combination is unobserved. In fact, Boyko and Beaulieu (2022) made an argument for not estimating these transition rates and corHMM was changed to reflect that belief - now by default unobserved state combinations are removed from the transition rate matrix. Nonetheless, it remains unclear whether it is valid to estimate these transition rates and I do not purport to solve that problem, though, based on what will be presented below, I'd wager we are correct in dropping the unobserved state combinations.
+
+### An alternative root prior
+
+The choice of root prior is an underappreciated aspect of discrete character model fitting. This choice can have a rather large impact on your results and generally there is little exploration beyond default. The default for corHMM is the "yang" (Yang 2006), but for corHMMDredge I have changed the default to "maddfitz" FitzJohn et al (2009) which better reflects a truly uninformative prior than either flat or "yang." I bring this up because the behaviour of this next section is even worse with the "yang" prior, but the result is not saved by the "maddfitz" prior. 
+
+I start by fitting the four models we will be examining. We have two corHMM models, the "full" model includes the unobserved state combinations and the collapsed does not. I only include l1 regularization in this example as my point is no longer about contrasting different forms of regularization. l2 regularization will preform about as well, though admittedly I did not examine any potential differences in-depth.
+
+### Model fitting
+
+Something worth noting is that the fitting of the "full" models is incredibly finicky for unregularized versions of discrete character models. Though it is always best practices to have multiple random starts when fitting a model, here I would argue it's necessary as even small diferences in the lnLik will have massive impacts on the transition rate estimates. This is not nearly as much of a problem for the regularized model. 
+
+```{r cache=TRUE}
+# unregularized
+corhmm_fit_full <- corHMM(phy = phy, 
+                          data = data, 
+                          rate.cat = 1, 
+                          root.p="maddfitz",
+                          collapse = FALSE,
+                          upper.bound = 1e10, 
+                          nstarts = 10,
+                          n.cores = 10)
+
+corhmm_fit_collapsed <- corHMM(phy = phy, 
+                               data = data, 
+                               rate.cat = 1, 
+                               root.p="maddfitz",
+                               collapse = TRUE,
+                               upper.bound = 1e10, 
+                               nstarts = 10,
+                               n.cores = 10)
+# regularized
+corhmm_fit_l1_full <- corHMM:::corHMMDredge(phy = phy, 
+                                            data = data, 
+                                            max.rate.cat = 1, 
+                                            pen_type = "l1", 
+                                            root.p="maddfitz",
+                                            collapse = FALSE)
+
+corhmm_fit_l1_collapsed <- corHMM:::corHMMDredge(phy = phy, 
+                                                 data = data, 
+                                                 max.rate.cat = 1, 
+                                                 pen_type = "l1", 
+                                                 root.p="madfitz",
+                                                 collapse = TRUE)
+```
+
+Now let us take a look at the results. What I would suggest is that there is little to no information estimate transitions to and from unobserved state combinations. I would go so far as to claim this is an "ill-posed" problem, which is exactly the reason we would apply regularization in other contexts.
+
+I will first clean these models up by dropping any parameters which are below 1e-5. This is done for a couple of reasons. First it will make the comparisons much easier. Second, these are parameters that I would drop during a corHMM dredge run anyways, as they are not needed to explain the data. 
+
+```{r}
+# drop low params
+corhmm_fit_full$solution[corhmm_fit_full$solution < 1e-5] <- NA
+corhmm_fit_full$index.mat[is.na(corhmm_fit_full$solution)] <- NA
+corhmm_fit_full$index.mat[!is.na(corhmm_fit_full$index.mat)]<-1:sum(!is.na(corhmm_fit_full$solution))
+# regularized
+corhmm_fit_l1_full$solution[corhmm_fit_l1_full$solution < 1e-5] <- NA
+corhmm_fit_l1_full$index.mat[is.na(corhmm_fit_l1_full$solution)] <- NA
+corhmm_fit_l1_full$index.mat[!is.na(corhmm_fit_l1_full$index.mat)] <- 1:3 # hardcoding indices, yikes
+```
+
+Now let's look at the regularized results.
+
+```{r, echo=FALSE}
+print("l1 collapsed transition rate matrix")
+corhmm_fit_l1_collapsed$solution
+print("l1 full transition rate matrix")
+corhmm_fit_l1_full$solution
+```
+What is remarkable about these results is that they are actually concordant with one another. It is somewhat difficult to see at the moment, but if one were to drop all transition rates estimated near 0 (1e-10), then the estimated parameters would be within 0.0001 of each other. 
+
+```{r, echo=FALSE}
+print("unregularized collapsed transition rate matrix")
+corhmm_fit_collapsed$solution
+print("unregularized full transition rate matrix")
+corhmm_fit_full$solution
+```
+
+Again, for the most part we see concordance! However, what has happened in all of my tests is that there is at least one extra parameter estimated to or from the unobserved state combination. Surely that means it is estimable right? Unfortunately, I would say no - there is just no information to estimate the rates in this case. 
+
+### Profile likelihoods
+
+```{r, cache=TRUE}
+# unregularized
+corhmm_profile_full <- corHMM:::get_batch_profile_lik(corhmm_obj = corhmm_fit_full,
+                                                      range_factor = 10000,
+                                                      n_points = 20,
+                                                      ncores = 10,
+                                                      dredge = FALSE)
+# regularized
+l1_profile_full <- corHMM:::get_batch_profile_lik(corhmm_obj = corhmm_fit_l1_full,
+                                                  range_factor = 10000,
+                                                  n_points = 20,
+                                                  ncores = 10,
+                                                  dredge = TRUE)
+
+```
+
+Plotting we see (a) clear ridge(s) for the unregularized version. This ridge is not present in the regularized result because that problematic and uninformative parameter is dropped from the model.
+
+```{r, echo = FALSE}
+print("unregularized result")
+corHMM:::plot_batch_profile_lik(corhmm_profile_full, 
+                                ylim = c(corhmm_fit_full$loglik-20, corhmm_fit_full$loglik))
+print("l1 regularized result")
+corHMM:::plot_batch_profile_lik(l1_profile_full, 
+                                ylim = c(corhmm_fit_l1_full$loglik-20, corhmm_fit_l1_full$loglik))
+```
+
+Once again, the results are far more consistent when using a regularized model. And if this model were run 100 times, we'd likely find at least a dozen different estimates for the unregularized model, even with multiple random starting values. This should be concerning. 
+
+### Is it ever possible to estimate transition rates to unobserved state combinations
+
+It is straightforward enough to imagine situations where one forces transitions between an unobserved intermediate state. In fact, we do this with hidden Markov models all the time (precursor model of Mazzari et al. 2012). But, the difference there is that those are known to be unobserved states and are coded differently than if one were to claim they were an observed state without any observations. I doubt that estimating transitions to and from unobserved state combinations is possible. And even if it is, it is likely to be unidentifiable with other models that use hidden states. Furthermore, whether we can test such a model outside the context of hidden Markov models is dubious. Imagine an intermediate unobserved state combination, this model presupposes a different data structure (say 4 possible state combinations) than when it is not included (3 possible state combinations). If coded as a hidden Markov problem, the inference is valid because the data is the same, but if we set the 4th combination to 0 observations, then we are saying the data is fundamentally different. It would be worth looking into this further at a later date. 
 
 ## Conclusion
 

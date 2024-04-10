@@ -74,7 +74,7 @@ get_formatted_data <- function(dat, index_mat){
   tip_states <- gsub(",.*", "", tip_states)
   tip_states <- gsub("\\(", "", tip_states)
   tip_states <- as.numeric(gsub("\\)", "", tip_states))
-  obs_states <- index_mat$legend[tip_states]
+  obs_states <- levels(as.factor(tip_data))[tip_states]
   cor_dat <- data.frame(sp=names(tip_data), do.call(rbind, strsplit(obs_states, "_")))
   rownames(cor_dat) <- NULL
   colnames(cor_dat) <- c("sp", 1:index_mat$nChar)
@@ -119,3 +119,17 @@ get_better_df <- function(df, col_nm, type, ntips){
     pivot_longer(cols = col_nm, names_to = "par", values_to = "value")
   return(df_longer)
 }
+
+get_rate_mat <- function(index_mat, pars){
+  rate_index_mat <- index_mat$full_rate_mat
+  rate_mat <- index_mat$full_rate_mat
+  for(j in 1:length(pars)){
+    par_index <- which(rate_index_mat == j, arr.ind = TRUE)
+    for(k in 1:nrow(par_index)){
+      rate_mat[par_index[k,1], par_index[k,2]] <- unlist(pars[j])
+    }
+  }
+  diag(rate_mat) <- -rowSums(rate_mat)
+  return(rate_mat)
+}
+
