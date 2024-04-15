@@ -19,7 +19,7 @@ phy <- trees[[1]]
 
 # which simulation number
 simulation <- "04"
-overwrite <- FALSE
+overwrite <- TRUE
 
 # the various file names
 par_table_name <- paste0("par_table-", simulation, ".csv")
@@ -46,16 +46,15 @@ rate_mats <- get_rate_mats(index_mat, par_table)
 ###### ###### ###### ###### data simulation ###### ###### ###### ###### 
 file_found <- full_dat_name %in% dir("data/")
 if(!file_found | overwrite){
-  full_dat <- lapply(rate_mats, function(x) get_sim_data(phy, x, index_mat))
+  for(i in 1:length(full_dat)){
+    cat("\r", i, "out of", length(full_dat), "...    ")
+    full_dat[[i]]$dat <- get_sim_data(full_dat[[i]]$phy, full_dat[[i]]$par, index_mat)
+    full_dat[[i]]$cor_dat <- get_formatted_data(full_dat[[i]]$dat, index_mat)
+  }
   saveRDS(full_dat, file = paste0("data/", full_dat_name))
 }else{
   full_dat <- readRDS(paste0("data/", full_dat_name))
 }
-
-# lapply(full_dat, function(x) table(x$TipStates))
-
-# format data
-cor_dat <- lapply(full_dat, function(x) get_formatted_data(x, index_mat))
 
 ###### ###### ###### ###### model fitting ###### ###### ###### ###### 
 file_name <- "res04_unreg.RDS"

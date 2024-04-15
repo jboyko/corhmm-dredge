@@ -25,10 +25,6 @@ cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
 
 sim_res_files <- dir("res/", full.names = TRUE)[grep(paste0("res", simulation, "_"), dir("res/"))]
 
-# res_reg_name <- paste0("res_reg-", simulation, ".RDS")
-# res_unreg_name <- paste0("res_unreg-", simulation, ".RDS")
-# res_bayes_name <- paste0("res_bayes-", simulation, ".RDS")
-
 # load everything
 if(simulation == "01"){
   index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=1)
@@ -82,26 +78,8 @@ print(df_summary)
 # write.csv(df_summary, file = "tables/table_01.csv", row.names = FALSE)
 # write.csv(df_summary, file = "tables/table_02.csv", row.names = FALSE)
 
-ggplot(df_all, aes(x = factor(type), y = diff, color = type)) + 
-  geom_half_boxplot(center=TRUE, errorbar.draw=FALSE, width=0.75, nudge=n, outlier.colour = NA) +
-  geom_half_point(alpha = 0.25, position=position_dodge(width=0.75)) +
-  geom_half_violin(side="r", nudge=n, trim=FALSE, width=0.75, position=position_dodge(width=0.75)) +
-  coord_cartesian(ylim=c(-5,5)) +
-  facet_grid(par~ntips, labeller = labeller(
-    par = label_parsed,   # Use label_parsed for mathematical expressions
-    ntips = label_parsed  # Use label_parsed for mathematical expressions
-  )) +
-  theme_minimal() +
-  theme(legend.position="bottom",
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.background = element_blank(),
-        strip.text.x = element_text(face = "bold", size = 12),
-        strip.text.y = element_text(face = "bold", size = 12, angle = 0)
-  ) +
-  labs(x = "Type", y = "Difference", color = "Type",
-       caption = "Source: Data Source Here") +
-  scale_color_brewer(palette = "Set1") # Use a color-blind friendly palette
-
+ggplot(df_summary, aes(x = factor(type), y = bias, fill = type)) + 
+  geom_boxplot(width=0.75, outlier.colour = NA)
 
 # ggsave("plots/plot_01.pdf")
 # ggsave("plots/plot_02.pdf")
