@@ -47,6 +47,21 @@ if(!file_found | overwrite){
 # creates a list of rate matrices for simulation
 rate_mats <- get_rate_mats(index_mat, par_table)
 
+# let's create the full data strucutre now.
+# a list with phy, sim pars, data
+full_dat <- list()
+count <- 1
+for(i in trees){
+  for(j in i){
+    for(k in rate_mats){
+      tmp <- list(phy = j, par = k, dat = NULL)
+      full_dat[[count]] <- tmp
+      count <- count+1
+    }
+  }
+}
+
+
 ###### ###### ###### ###### data simulation ###### ###### ###### ###### 
 file_found <- full_dat_name %in% dir("data/")
 if(!file_found | overwrite){

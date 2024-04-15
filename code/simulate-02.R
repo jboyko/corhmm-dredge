@@ -9,7 +9,7 @@ source("code/utils.R")
 
 nSim <- 100
 if (detectCores()>100){
-  mccores <- 100  
+  mccores <- 50  
 }else{
   mccores <- 4
 }
