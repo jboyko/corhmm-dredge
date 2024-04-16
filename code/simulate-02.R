@@ -9,7 +9,7 @@ source("code/utils.R")
 
 nSim <- 100
 if (detectCores()>100){
-  mccores <- 50  
+  mccores <- 100  
 }else{
   mccores <- 4
 }
@@ -19,7 +19,7 @@ phy <- trees[[1]]
 
 # which simulation number
 simulation <- "02"
-overwrite <- FALSE
+overwrite <- TRUE
 
 # the various file names
 par_table_name <- paste0("par_table-", simulation, ".csv")

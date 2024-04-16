@@ -9,7 +9,7 @@ source("code/utils.R")
 
 nSim <- 100
 if (detectCores()>100){
-  mccores <- 50  
+  mccores <- 100  
 }else{
   mccores <- 4
 }
@@ -63,7 +63,13 @@ if(!file_found | overwrite){
   for(i in 1:length(full_dat)){
     cat("\r", i, "out of", length(full_dat), "...    ")
     full_dat[[i]]$dat <- get_sim_data(full_dat[[i]]$phy, full_dat[[i]]$par, index_mat)
-    full_dat[[i]]$cor_dat <- get_formatted_data(full_dat[[i]]$dat, index_mat)
+    tip_states <- rownames(index_mat$full_rate_mat)[full_dat[[i]]$dat$TipStates]
+    tmp_dat <- do.call(rbind, strsplit(tip_states, "|"))[,c(1,3,5)]
+    cor_dat <- data.frame(sp = names(full_dat[[i]]$dat$TipStates),
+                          x1 = factor(tmp_dat[,1], c(1,2)),
+                          x2 = factor(tmp_dat[,2], c(1,2)),
+                          x3 = factor(tmp_dat[,3], c(1,2)))
+    full_dat[[i]]$cor_dat <- cor_dat
   }
   saveRDS(full_dat, file = paste0("data/", full_dat_name))
 }else{
