@@ -106,8 +106,8 @@ get_solution_from_res <- function(res, index.mat = NULL){
 }
 
 get_par_from_rate_mat <- function(dat, index_mat){
-  p <- sapply(1:max(index_mat$rate_mat, na.rm = TRUE), function(x) 
-    na.omit(c(dat$par))[na.omit(c(index_mat$rate_mat) == x)][1])
+  p <- sapply(1:max(index_mat$full_rate_mat, na.rm = TRUE), function(x) 
+    na.omit(c(dat$par))[na.omit(c(index_mat$full_rate_mat) == x)][1])
   return(p)
 }
 

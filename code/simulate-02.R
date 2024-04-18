@@ -19,7 +19,7 @@ phy <- trees[[1]]
 
 # which simulation number
 simulation <- "02"
-overwrite <- TRUE
+overwrite <- FALSE
 
 # the various file names
 par_table_name <- paste0("par_table-", simulation, ".csv")
