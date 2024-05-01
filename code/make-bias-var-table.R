@@ -4,8 +4,9 @@ library(dplyr)
 library(tidyr)
 
 source("code/utils.R")
-
+######### ############ ############ ########## ######### ########
 # sim 1 
+######### ############ ############ ########## ######### ########
 trees <- lapply(dir("trees/", full.names = TRUE), read.tree)
 simulation <- "01"
 index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=1)
@@ -36,13 +37,15 @@ for(i in 1:length(df_list)){
   df_long_list[[i]]$diff <- df_long_list[[i]]$value - df_true_long$value
 }
 df_all <- do.call(rbind, df_long_list)
-convert_par_format <- function(par_value) {
-  gsub("\\((\\d)\\)_\\((\\d)\\)", "q[\\1][\\2]", par_value)
-}
+# convert_par_format <- function(par_value) {
+#   gsub("\\((\\d)\\)_\\((\\d)\\)", "q[\\1][\\2]", par_value)
+# }
 # df_all$par <- sapply(df_all$par, convert_par_format)
 df_all_1 <- cbind(sim = "sim-01", df_all)
 
+######### ############ ############ ########## ######### ########
 # sim 2
+######### ############ ############ ########## ######### ########
 trees <- lapply(dir("trees/", full.names = TRUE), read.tree)
 simulation <- "02"
 index_mat <- get_index_mat(nChar=2, nStates=2, nRateClass=1)
@@ -78,8 +81,14 @@ df_all <- do.call(rbind, df_long_list)
 # df_all$par <- sapply(df_all$par, convert_par_format)
 df_all_2 <- cbind(sim = "sim-02", df_all)
 
+library(ggplot2)
+ggplot(df_all_2, aes(x = type, y = value)) +
+  geom_boxplot() +
+  coord_cartesian(ylim=c(0,2))
 
+######### ############ ############ ########## ######### ########
 # sim 3
+######### ############ ############ ########## ######### ########
 trees <- lapply(dir("trees/", full.names = TRUE), read.tree)
 simulation <- "03"
 index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=2)
@@ -109,14 +118,15 @@ for(i in 1:length(df_list)){
   df_long_list[[i]]$diff <- df_long_list[[i]]$value - df_true_long$value
 }
 df_all <- do.call(rbind, df_long_list)
-convert_par_format <- function(par_value) {
-  gsub("\\((\\d)\\)_\\((\\d)\\)", "q[\\1][\\2]", par_value)
-}
-df_all$par <- sapply(df_all$par, convert_par_format)
-df_all_3 <- cbind(sim = "sim-02", df_all)
+# convert_par_format <- function(par_value) {
+#   gsub("\\((\\d)\\)_\\((\\d)\\)", "q[\\1][\\2]", par_value)
+# }
+# df_all$par <- sapply(df_all$par, convert_par_format)
+df_all_3 <- cbind(sim = "sim-03", df_all)
 
-
+######### ############ ############ ########## ######### ########
 # sim 4
+######### ############ ############ ########## ######### ########
 trees <- lapply(dir("trees/", full.names = TRUE), read.tree)
 simulation <- "04"
 index_mat <- get_index_mat(nChar=3, nStates=2, nRateClass=1)
@@ -146,8 +156,8 @@ for(i in 1:length(df_list)){
   df_long_list[[i]]$diff <- df_long_list[[i]]$value - df_true_long$value
 }
 df_all <- do.call(rbind, df_long_list)
-convert_par_format <- function(par_value) {
-  gsub("\\((\\d)\\)_\\((\\d)\\)", "q[\\1][\\2]", par_value)
-}
-df_all$par <- sapply(df_all$par, convert_par_format)
-df_all_3 <- cbind(sim = "sim-02", df_all)
+# convert_par_format <- function(par_value) {
+#   gsub("\\((\\d)\\)_\\((\\d)\\)", "q[\\1][\\2]", par_value)
+# }
+# df_all$par <- sapply(df_all$par, convert_par_format)
+df_all_4 <- cbind(sim = "sim-04", df_all)
