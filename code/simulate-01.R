@@ -17,7 +17,7 @@ if (detectCores()>100){
 trees <- lapply(dir("trees/", full.names = TRUE), read.tree)
 # which simulation number
 simulation <- "01"
-overwrite <- FALSE
+overwrite <- TRUE
 
 # the various file names
 par_table_name <- paste0("par_table-", simulation, ".csv")
