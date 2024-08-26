@@ -61,7 +61,7 @@ if(!file_found | overwrite){
   for(i in 1:length(full_dat)){
     cat("\r", i, "out of", length(full_dat), "...    ")
     full_dat[[i]]$dat <- get_sim_data(full_dat[[i]]$phy, full_dat[[i]]$par, index_mat)
-    full_dat[[i]]$cor_dat <- get_formatted_data(full_dat[[i]]$dat, index_mat)
+    full_dat[[i]]$cor_dat <- get_formatted_data(full_dat[[i]]$dat$TipStates, index_mat$full_rate_mat)
   }
   saveRDS(full_dat, file = paste0("data/", full_dat_name))
 }else{
