@@ -62,22 +62,24 @@ get_rate_mats <- function(index_mat, par_table){
   return(rate_mats)
 }
 
-get_sim_data <- function(phy, rate_mat, index_mat){
-  eq_freq <- c(Null(rate_mat))
-  dat <- corHMM:::simMarkov(phy, rate_mat, eq_freq)
+get_sim_data <- function(phy, rate_mat, index_mat, root.p=NULL){
+  if(is.null(root.p)){
+    root.p <- c(Null(rate_mat))
+  }
+  dat <- corHMM:::simMarkov(phy, rate_mat, root.p)
   return(dat)
 }
 
 get_formatted_data <- function(dat, index_mat){
-  tip_data <- dat$TipStates
-  tip_states <- sapply(tip_data, function(x) colnames(index_mat$full_rate_mat)[x])
-  tip_states <- gsub(",.*", "", tip_states)
-  tip_states <- gsub("\\(", "", tip_states)
-  tip_states <- as.numeric(gsub("\\)", "", tip_states))
-  obs_states <- levels(as.factor(tip_data))[tip_states]
-  cor_dat <- data.frame(sp=names(tip_data), do.call(rbind, strsplit(obs_states, "_")))
-  rownames(cor_dat) <- NULL
-  colnames(cor_dat) <- c("sp", 1:index_mat$nChar)
+  states <- sapply(dat, function(x) colnames(index_mat)[x])
+  tmp_df <- do.call(rbind, strsplit(states, "\\|"))
+  tmp_state_names <- do.call(rbind, strsplit(colnames(index_mat), "\\|"))
+  unique_states <- apply(tmp_state_names, 2, unique)
+  cor_dat <- data.frame(sp=names(dat))
+  for(i in 1:ncol(unique_states)){
+    cor_dat[,i+1] <- factor(tmp_df[,i], unique_states[,i])
+  }
+  rownames(cor_dat) <- names(dat)
   return(cor_dat)
 }
 
@@ -133,3 +135,42 @@ get_rate_mat <- function(index_mat, pars){
   return(rate_mat)
 }
 
+model_test_dep <- function(cor_obj, index_mat){
+  Q <- cor_obj$solution
+  Q[is.na(Q)] <- 0
+  test_1 <- Q[index_mat == 8] > Q[index_mat == 3]
+  test_2 <- Q[index_mat == 1] > Q[index_mat == 6]
+  test_3 <- all(index_mat[order(Q, na.last = TRUE, decreasing = TRUE)[1:2]] == c(8,1))
+  return(c(test_1=test_1, test_2=test_2, test_3=test_3))
+}
+
+
+model_test_ord <- function(cor_obj, index_mat){
+  Q <- cor_obj$solution
+  test_1 <- is.na(Q[1,3]) 
+  test_2 <- !is.na(Q[2,1]) & !is.na(Q[2,3]) 
+  test_3 <- all(is.na(Q[3,]))
+  test_4 <- max(cor_obj$index.mat, na.rm = TRUE) == 1
+  return(c(test_1=test_1, test_2=test_2, test_3=test_3, test_4=test_4))
+}
+
+fit_models <- function(data_list, pen_type, lambda, grad, file_name, overwrite, mccores) {
+  if (!file_exists(file_name) || overwrite) {
+    res <- mclapply(data_list, function(x) 
+      corHMM:::corHMMDredgeBase(x$phy, x$cor_dat, 1, pen.type = pen_type, 
+        lambda = lambda, root.p = "maddfitz", grad = grad), 
+      mc.cores = mccores)
+    saveRDS(res, file = file_name)
+    return(res)
+  } else {
+    return(readRDS(file_name))
+  }
+}
+
+file_exists <- function(file_path) {
+  file_path %in% dir(dirname(file_path))
+}
+
+get_full_path <- function(folder_name) {
+  return(normalizePath(file.path(getwd(), folder_name), winslash = "/", mustWork = FALSE))
+}

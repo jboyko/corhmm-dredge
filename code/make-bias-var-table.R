@@ -14,8 +14,7 @@ index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=1)
 par_table_name <- paste0("par_table-", simulation, ".csv")
 full_dat_name <- paste0("full_data-", simulation, ".RDS")
 cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
-sim_res_files <- dir("results/", full.names = TRUE)[grep(paste0("res", simulation, "_"), 
-                                                         dir("results/"))]
+sim_res_files <- dir("results/", full.names = TRUE)[grep(paste0("res", simulation, "_"), dir("results/"))]
 tmp <- get_par_table(index_mat, 100, mean = 0, sd = 0.25)  
 par_table <- read.csv(paste0("parameter_tables/", par_table_name))
 colnames(par_table) <- colnames(tmp)

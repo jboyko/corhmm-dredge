@@ -68,64 +68,13 @@ if(!file_found | overwrite){
   full_dat <- readRDS(paste0("data/", full_dat_name))
 }
 
-###### ###### ###### ###### model fitting ###### ###### ###### ######
-file_name <- "res01_unreg.RDS"
-file_found <- file_name %in% dir("res/")
-if(!file_found | overwrite){
-  res_unreg <- mclapply(full_dat, function(x) 
-    corHMM(x$phy, x$cor_dat, 1, root.p = "maddfitz"), 
-    mc.cores = mccores)
-  saveRDS(res_unreg, file = paste0("res/", file_name))
-}else{
-  res_unreg <- readRDS(paste0("res/", file_name))
-}
+###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
+###### ###### ###### ###### model fitting ###### ###### ###### ###### ###### ######
+###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
-file_name <- "res01_reg-l1.RDS"
-file_found <- file_name %in% dir("res/")
-if(!file_found | overwrite){
-  res_reg <- mclapply(full_dat, function(x) 
-    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l1", root.p = "maddfitz"), 
-    mc.cores = mccores)
-  saveRDS(res_reg, file = paste0("res/", file_name))
-}else{
-  res_reg <- readRDS(paste0("res/", file_name))
-}
+results_dir <- get_full_path("param_results/")
+fit_models(full_dat, "l1", 0, TRUE, paste0(results_dir, "/res01_l0.RDS"), overwrite, mccores)
+fit_models(full_dat, "l1", 1, TRUE, paste0(results_dir, "/res01_l1.RDS"), overwrite, mccores)
+fit_models(full_dat, "l2", 1, TRUE, paste0(results_dir, "/res01_l2.RDS"), overwrite, mccores)
+fit_models(full_dat, "er", 1, TRUE, paste0(results_dir, "/res01_er.RDS"), overwrite, mccores)
 
-file_name <- "res01_reg-l2.RDS"
-file_found <- file_name %in% dir("res/")
-if(!file_found | overwrite){
-  res_reg <- mclapply(full_dat, function(x) 
-    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l2", root.p = "maddfitz"), 
-    mc.cores = mccores)
-  saveRDS(res_reg, file = paste0("res/", file_name))
-}else{
-  res_reg <- readRDS(paste0("res/", file_name))
-}
-
-# file_found <- res_bayes_name %in% dir("res/")
-# if(!file_found | overwrite){
-#   nPar <- max(index_mat$full_rate_mat)
-#   res_bayes <- mclapply(cor_dat, function(x) 
-#     MCMCmetrop1R(log_posterior, theta.init=rep(0.5, nPar), force.samp=TRUE,
-#                  optim.lower=rep(0, nPar), optim.method = "L-BFGS-B",
-#                  mcmc=10000, burnin=500, verbose=TRUE, logfun=TRUE,
-#                  tree=phy, data=x, rate.cat = 1, rate.mat = index_mat$full_rate_mat),
-#     mc.cores = mccores)
-#   saveRDS(res_bayes, file = paste0("res/", res_bayes_name))
-# }else{
-#   res_bayes <- readRDS(paste0("res/", res_bayes_name))
-# }
-
-###### ###### ###### ###### summarization ###### ###### ###### ###### 
-# df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
-# df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
-# 
-# plot_data <- (cbind(df_unreg, df_reg))
-# colnames(plot_data) <- c("01_unreg", "10_unreg", "01_reg", "10_reg")
-# 
-# bias = colMeans(plot_data) - 1
-# varr = apply(plot_data, 2, var)
-# mse = colMeans((plot_data - 1)^2)
-# rmse = sqrt(colMeans((plot_data - 1)^2))
-# 
-# print(t(data.frame(bias, varr, mse, rmse)))

@@ -1,4 +1,4 @@
-# simple two state simulation with hmms
+# simple 3 character simulation with binary states
 setwd("~/corhmm-dredge/")
 
 library(corHMM)
@@ -27,16 +27,12 @@ full_dat_name <- paste0("full_data-", simulation, ".RDS")
 cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
 
 # creates an index mat appropriate for nchar, nstates, and nhidden
-index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=2)
+index_mat <- get_index_mat(nChar=3, nStates=2, nRateClass=1)
 
 ###### ###### ###### ###### parameter table generation ###### ###### ###### ###### 
 file_found <- par_table_name %in% dir("parameter_tables/")
 if(!file_found | overwrite){
-  par_table <- get_par_table(index_mat, nSim, mean = 0, sd = 0.25)
-  # modify for hidden states
-  par_table[,c(1,2)] <- par_table[,c(1,2)] * 5
-  par_table[,c(3,4)] <- par_table[,c(3,4)] / 5
-  par_table[,c(5,6)] <- par_table[,c(5,6)] * 2
+  par_table <- get_par_table(index_mat, nSim, mean = 0, sd = 0.25)  
   write.csv(par_table, file = paste0("parameter_tables/", par_table_name), row.names = FALSE)
 }else{
   tmp <- get_par_table(index_mat, nSim, mean = 0, sd = 0.25)  
@@ -61,88 +57,31 @@ for(i in trees){
   }
 }
 
-
 ###### ###### ###### ###### data simulation ###### ###### ###### ###### 
 file_found <- full_dat_name %in% dir("data/")
 if(!file_found | overwrite){
   for(i in 1:length(full_dat)){
     cat("\r", i, "out of", length(full_dat), "...    ")
     full_dat[[i]]$dat <- get_sim_data(full_dat[[i]]$phy, full_dat[[i]]$par, index_mat)
-    full_dat[[i]]$cor_dat <- get_formatted_data(full_dat[[i]]$dat, index_mat)
+    tip_states <- rownames(index_mat$full_rate_mat)[full_dat[[i]]$dat$TipStates]
+    tmp_dat <- do.call(rbind, strsplit(tip_states, "|"))[,c(1,3,5)]
+    cor_dat <- data.frame(sp = names(full_dat[[i]]$dat$TipStates),
+                          x1 = factor(tmp_dat[,1], c(1,2)),
+                          x2 = factor(tmp_dat[,2], c(1,2)),
+                          x3 = factor(tmp_dat[,3], c(1,2)))
+    full_dat[[i]]$cor_dat <- cor_dat
   }
   saveRDS(full_dat, file = paste0("data/", full_dat_name))
 }else{
   full_dat <- readRDS(paste0("data/", full_dat_name))
 }
 
-###### ###### ###### ###### model fitting ###### ###### ###### ###### 
-file_name <- "res03_unreg.RDS"
-file_found <- file_name %in% dir("res/")
-if(!file_found | overwrite){
-  res_unreg <- mclapply(full_dat, function(x) 
-    corHMM(x$phy, x$cor_dat, 2, root.p = "maddfitz"), 
-    mc.cores = mccores)
-  saveRDS(res_unreg, file = paste0("res/", file_name))
-}else{
-  res_unreg <- readRDS(paste0("res/", file_name))
-}
+###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
+###### ###### ###### ###### model fitting ###### ###### ###### ###### ###### ######
+###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
-file_name <- "res03_reg-l1.RDS"
-file_found <- file_name %in% dir("res/")
-if(!file_found | overwrite){
-  res_reg <- mclapply(full_dat, function(x) 
-    corHMM:::corHMMDredge(x$phy, x$cor_dat, 2, pen_type = "l1", 
-                          root.p = "maddfitz", rate.mat = index_mat$full_rate_mat), 
-    mc.cores = mccores)
-  saveRDS(res_reg, file = paste0("res/", file_name))
-}else{
-  res_reg <- readRDS(paste0("res/", file_name))
-}
-
-file_name <- "res03_reg-l2.RDS"
-file_found <- file_name %in% dir("res/")
-if(!file_found | overwrite){
-  res_reg <- mclapply(full_dat, function(x) 
-    corHMM:::corHMMDredge(x$phy, x$cor_dat, 2, pen_type = "l2", 
-                          root.p = "maddfitz", rate.mat = index_mat$full_rate_mat), 
-    mc.cores = mccores)
-  saveRDS(res_reg, file = paste0("res/", file_name))
-}else{
-  res_reg <- readRDS(paste0("res/", file_name))
-}
-
-###### ###### ###### ###### summarization ###### ###### ###### ###### 
-# supp_hmm <- which((unlist(lapply(res_unreg_b, function(x) x$AICc)) - unlist(lapply(res_unreg, function(x) x$AICc)))>0)
-# 
-# res_unreg <- res_unreg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 2))]
-# res_reg <- res_reg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 2))]
-# par_table <- par_table[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 2)), ]
-# 
-# df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
-# df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
-# 
-# plot_data <- (cbind(df_unreg, df_reg))
-# 
-# bias = colMeans(plot_data - cbind(par_table, par_table))
-# varr = apply(plot_data, 2, var)
-# mse = colMeans((plot_data - cbind(par_table, par_table))^2)
-# rmse = sqrt(colMeans((plot_data - cbind(par_table, par_table))^2))
-# 
-# print(t(data.frame(bias, varr, mse, rmse)))
-
-# boxplot(plot_data); abline(h = colMeans(par_table))
-
-
-# bias = colMeans(log(plot_data) - log(cbind(par_table, par_table)))
-# varr = apply(log(plot_data), 2, var)
-# mse = colMeans((log(plot_data) - log(cbind(par_table, par_table)))^2)
-# rmse = sqrt(colMeans((log(plot_data) - log(cbind(par_table, par_table)))^2))
-
-# t(data.frame(bias, varr, mse, rmse))
-
-# boxplot(log(plot_data)); abline(h = colMeans(log(par_table)))
-
-# colMeans(par_table)
-# colMeans(plot_data)
-
-# df_reg[supp_hmm,]
+results_dir <- get_full_path("param_results/")
+fit_models(full_dat, "l1", 0, TRUE, paste0(results_dir, "/res03_l0.RDS"), overwrite, mccores)
+fit_models(full_dat, "l1", 1, TRUE, paste0(results_dir, "/res03_l1.RDS"), overwrite, mccores)
+fit_models(full_dat, "l2", 1, TRUE, paste0(results_dir, "/res03_l2.RDS"), overwrite, mccores)
+fit_models(full_dat, "er", 1, TRUE, paste0(results_dir, "/res03_er.RDS"), overwrite, mccores)

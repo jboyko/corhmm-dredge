@@ -74,54 +74,12 @@ if(!file_found | overwrite){
   full_dat <- readRDS(paste0("data/", full_dat_name))
 }
 
-###### ###### ###### ###### model fitting ###### ###### ###### ###### 
-file_name <- "res02_unreg.RDS"
-file_found <- file_name %in% dir("res/")
-if(!file_found | overwrite){
-  res_unreg <- mclapply(full_dat, function(x) 
-    corHMM(x$phy, x$cor_dat, 1, root.p = "maddfitz"), 
-    mc.cores = mccores)
-  saveRDS(res_unreg, file = paste0("res/", file_name))
-}else{
-  res_unreg <- readRDS(paste0("res/", file_name))
-}
+###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
+###### ###### ###### ###### model fitting ###### ###### ###### ###### ###### ######
+###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ######
 
-file_name <- "res02_reg-l1.RDS"
-file_found <- file_name %in% dir("res/")
-if(!file_found | overwrite){
-  res_reg <- mclapply(full_dat, function(x) 
-    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l1", root.p = "maddfitz"), 
-    mc.cores = mccores)
-  saveRDS(res_reg, file = paste0("res/", file_name))
-}else{
-  res_reg <- readRDS(paste0("res/", file_name))
-}
-
-file_name <- "res02_reg-l2.RDS"
-file_found <- file_name %in% dir("res/")
-if(!file_found | overwrite){
-  res_reg <- mclapply(full_dat, function(x) 
-    corHMM:::corHMMDredge(x$phy, x$cor_dat, 1, pen_type = "l2", root.p = "maddfitz"), 
-    mc.cores = mccores)
-  saveRDS(res_reg, file = paste0("res/", file_name))
-}else{
-  res_reg <- readRDS(paste0("res/", file_name))
-}
-
-###### ###### ###### ###### summarization ###### ###### ###### ###### 
-# res_unreg <- res_unreg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4))]
-# res_reg <- res_reg[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4))]
-# par_table <- par_table[unlist(lapply(full_dat, function(x) length(table(x$TipStates)) == 4)), ]
-# 
-# df_unreg <- do.call(rbind, lapply(res_unreg, get_solution_from_res))
-# df_reg <- do.call(rbind, lapply(res_reg, get_solution_from_res))
-# 
-# plot_data <- (cbind(df_unreg, df_reg))
-# colnames(plot_data) <- c("01_unreg", "10_unreg", "01_reg", "10_reg")
-# 
-# bias = colMeans(plot_data) - 1
-# varr = apply(plot_data, 2, var)
-# mse = colMeans((plot_data - 1)^2)
-# rmse = sqrt(colMeans((plot_data - 1)^2))
-# 
-# print(t(data.frame(bias, varr, mse, rmse)))
+results_dir <- get_full_path("param_results/")
+fit_models(full_dat, "l1", 0, TRUE, paste0(results_dir, "/res02_l0.RDS"), overwrite, mccores)
+fit_models(full_dat, "l1", 1, TRUE, paste0(results_dir, "/res02_l1.RDS"), overwrite, mccores)
+fit_models(full_dat, "l2", 1, TRUE, paste0(results_dir, "/res02_l2.RDS"), overwrite, mccores)
+fit_models(full_dat, "er", 1, TRUE, paste0(results_dir, "/res02_er.RDS"), overwrite, mccores)
