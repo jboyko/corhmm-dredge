@@ -19,7 +19,7 @@ nSim = 100
 simulation <- "01"
 df_out <- list()
 count <- 0
-for (simulation in c("01", "02", "04")){
+for (simulation in c("01", "02", "03")){
   print(simulation)
   count <- count + 1
   # the various file names
@@ -27,7 +27,7 @@ for (simulation in c("01", "02", "04")){
   full_dat_name <- paste0("full_data-", simulation, ".RDS")
   cor_dat_name <- paste0("cor_data-", simulation, ".RDS")
   
-  sim_res_files <- dir("results/", full.names = TRUE)[grep(paste0("res", simulation), dir("results/"))]
+  sim_res_files <- dir("param_results/", full.names = TRUE)[grep(paste0("res", simulation), dir("param_results/"))]
   
   # load everything
   if(simulation == "01"){
@@ -37,12 +37,9 @@ for (simulation in c("01", "02", "04")){
     index_mat <- get_index_mat(nChar=2, nStates=2, nRateClass=1)
   }
   if(simulation == "03"){
-    index_mat <- get_index_mat(nChar=1, nStates=2, nRateClass=2)
-  }
-  if(simulation == "04"){
     index_mat <- get_index_mat(nChar=3, nStates=2, nRateClass=1)
   }
-  
+
   tmp <- get_par_table(index_mat, nSim, mean = 0, sd = 0.25)  
   par_table <- read.csv(paste0("parameter_tables/", par_table_name))
   colnames(par_table) <- colnames(tmp)
@@ -92,17 +89,21 @@ for (simulation in c("01", "02", "04")){
   df_out[[count]] <- df_all
 }
 
-ggplot(df_out[[1]], 
-  aes(x = factor(type), y = diff, fill = as.factor(ntips))) + 
-  geom_boxplot(width=0.75, outlier.colour = NA) +
-  coord_cartesian(ylim=c(-5, 5))
+# ggplot(df_out[[1]],
+#   aes(x = factor(type), y = diff, fill = as.factor(ntips))) +
+#   geom_boxplot(width=0.75, outlier.colour = NA) +
+#   coord_cartesian(ylim=c(-5, 5))
 
 # Define the list of functions
 agg_funcs <- list(mean = mean, varriance = var, median = median)
 
 # with 100 trans / MY
 dat <- do.call(rbind, df_out)
-dat$rmse <-(dat$value - dat$true)^2
+dat$rmse <-(dat$value - dat$true)^2 # this is actually the squared difference. rmse is calculated later. 
+raw_dat <- dat
+colnames(raw_dat) <- c(colnames(dat)[-7], "mse")
+write.csv(raw_dat, "tables/raw-parameter-comparison.csv", row.names = FALSE)
+raw_dat <- NULL # big file, remove
 # Apply the aggregate function
 result <- aggregate(dat[,c(4:7)], 
   by = list(ntips = dat$ntips, type = dat$type), 
@@ -111,6 +112,16 @@ result <- aggregate(dat[,c(4:7)],
 result <- cbind(include="all",result)
 # Unlist and convert to a data frame for better readability
 final_df <- data.frame(result)
+
+prop_df1 <- cbind(include= "all",
+data.frame(l1= result[result$type == "l1", 4][,2]/result[result$type == "l0", 4][,2],
+l2 = result[result$type == "l2", 4][,2]/result[result$type == "l0", 4][,2],
+er = result[result$type == "er", 4][,2]/result[result$type == "l0", 4][,2]))
+
+data.frame(l1= result[result$type == "l1", 4][,2]/result[result$type == "l0", 4][,2],
+  l2 = result[result$type == "l2", 4][,2]/result[result$type == "l0", 4][,2],
+  er = result[result$type == "er", 4][,2]/result[result$type == "l0", 4][,2])
+
 
 # <50 trans / MY
 dat_prune_50 <- as.data.frame(dat)[!dat$value > 50,]
@@ -124,6 +135,12 @@ result <- cbind(include="<50",result)
 result$value[7:9,2]/result$value[,2]
 final_df <- rbind(final_df, result)
 
+prop_df2 <- cbind(include= "<50",
+  data.frame(l1= result[result$type == "l1", 4][,2]/result[result$type == "l0", 4][,2],
+    l2 = result[result$type == "l2", 4][,2]/result[result$type == "l0", 4][,2],
+    er = result[result$type == "er", 4][,2]/result[result$type == "l0", 4][,2]))
+
+
 # <10 trans / MY
 dat_prune_10 <- as.data.frame(dat)[!dat$value > 10,]
 dat_prune_10$rmse <-(dat_prune_10$value - dat_prune_10$true)^2
@@ -135,7 +152,12 @@ result <- aggregate(dat_prune_10[,4:7],
 result <- cbind(include="<10",result)
 result$value[7:9,2]/result$value[,2]
 final_df <- rbind(final_df, result)
-final_df$rmse <- sqrt(final_df$rmse)
+final_df$rmse <- sqrt(final_df$rmse) # convert mse to rmse
+
+prop_df3 <- cbind(include= "<10",
+  data.frame(l1= result[result$type == "l1", 4][,2]/result[result$type == "l0", 4][,2],
+    l2 = result[result$type == "l2", 4][,2]/result[result$type == "l0", 4][,2],
+    er = result[result$type == "er", 4][,2]/result[result$type == "l0", 4][,2]))
 
 colnames(final_df) <- c("include", "ntips", "type", "estimate", "sim", "diff", "rmse")
 
@@ -151,7 +173,9 @@ stats_df <- data.frame(
 
 write.csv(stats_df, "tables/stats-summary-by-type.csv", row.names = FALSE)
 
-
+prop_var_df <- rbind(prop_df1, prop_df2, prop_df3)
+prop_var_df[,-1] * 100
+write.csv(prop_var_df, "tables/propor-variance-by-type.csv", row.names = FALSE)
 # with 100 trans / MY
 dat <- do.call(rbind, df_out)
 # Apply the aggregate function

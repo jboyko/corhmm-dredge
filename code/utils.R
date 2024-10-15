@@ -138,21 +138,41 @@ get_rate_mat <- function(index_mat, pars){
 model_test_dep <- function(cor_obj, index_mat){
   Q <- cor_obj$solution
   Q[is.na(Q)] <- 0
-  test_1 <- Q[index_mat == 8] > Q[index_mat == 3]
-  test_2 <- Q[index_mat == 1] > Q[index_mat == 6]
-  test_3 <- all(index_mat[order(Q, na.last = TRUE, decreasing = TRUE)[1:2]] == c(8,1))
+  test_1 <- Q[index_mat == 8] > Q[index_mat == 3] # ovi->vivi|cold > |warm (q1)
+  test_2 <- Q[index_mat == 1] > Q[index_mat == 6] # vivi->ovi|warm > |cold (q2)
+  test_3 <- all(index_mat[order(Q, na.last = TRUE, decreasing = TRUE)[1:2]] == c(8,1)) #q1>q2>qij
   return(c(test_1=test_1, test_2=test_2, test_3=test_3))
 }
 
 
 model_test_ord <- function(cor_obj, index_mat){
   Q <- cor_obj$solution
-  test_1 <- is.na(Q[1,3]) 
-  test_2 <- !is.na(Q[2,1]) & !is.na(Q[2,3]) 
-  test_3 <- all(is.na(Q[3,]))
-  test_4 <- max(cor_obj$index.mat, na.rm = TRUE) == 1
+  test_1 <- is.na(Q[1,3]) # must transition through intermediate?
+  test_2 <- !is.na(Q[2,1]) & !is.na(Q[2,3]) # intermediate can go back and forward?
+  test_3 <- all(is.na(Q[3,])) # final state cannot transition back 
+  test_4 <- max(cor_obj$index.mat, na.rm = TRUE) == 1 # equal rates for all
   return(c(test_1=test_1, test_2=test_2, test_3=test_3, test_4=test_4))
 }
+
+model_test_hmm <- function(cor_obj, index_mat){
+  Q <- cor_obj$solution
+  if(dim(Q)[1] > 2){
+    test_1 <- TRUE # evidence of hidden rates
+    R1 <- mean(Q[c(1,2), c(1,2)], na.rm = TRUE) 
+    R2 <- mean(Q[c(3,4), c(3,4)], na.rm = TRUE)
+    test_2 <- sort(c(R1, R2))[2]/sort(c(R1, R2))[1] >= 100 # fast rate class 100x faster
+    fastest_rate <- sort(MatrixToPars(cor_obj), decreasing = TRUE)[1]
+    rate_index <- which(Q == fastest_rate, arr.ind = TRUE)
+    test_3 <- !any(abs(rate_index[,1] - rate_index[,2]) > 1) # fastest rate is observed trans
+    R1_sd <- sd(cor_obj$index.mat[c(1,2), c(1,2)], na.rm = TRUE)
+    R2_sd <- sd(cor_obj$index.mat[c(3,4), c(3,4)], na.rm = TRUE)
+    test_4 <- (R1_sd == 0) & (R2_sd == 0) # equal rates for both rate classes
+  }else{
+    test_1=test_2=test_3=test_4 <- FALSE
+  }
+  return(c(test_1=test_1, test_2=test_2, test_3=test_3, test_4=test_4))
+}
+
 
 fit_models <- function(data_list, pen_type, lambda, grad, file_name, overwrite, mccores) {
   if (!file_exists(file_name) || overwrite) {
