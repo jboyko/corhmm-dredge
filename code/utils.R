@@ -140,8 +140,10 @@ model_test_dep <- function(cor_obj, index_mat){
   Q[is.na(Q)] <- 0
   test_1 <- Q[index_mat == 8] > Q[index_mat == 3] # ovi->vivi|cold > |warm (q1)
   test_2 <- Q[index_mat == 1] > Q[index_mat == 6] # vivi->ovi|warm > |cold (q2)
-  test_3 <- all(index_mat[order(Q, na.last = TRUE, decreasing = TRUE)[1:2]] == c(8,1)) #q1>q2>qij
-  return(c(test_1=test_1, test_2=test_2, test_3=test_3))
+  # test_3 <- all(index_mat[order(Q, na.last = TRUE, decreasing = TRUE)[1:2]] == c(8,1)) #q1>q2>qij
+  test_3 <- Q[index_mat == 5] == Q[index_mat == 7] # warm->cold == warm->cold (qx)
+  test_4 <- Q[index_mat == 2] == Q[index_mat == 4] # cold->warm == cold->warm(qy)
+  return(c(test_1=test_1, test_2=test_2, test_3=test_3, test_4=test_4))
 }
 
 

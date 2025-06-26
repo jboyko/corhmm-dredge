@@ -8,7 +8,7 @@ devtools::load_all()
 
 run_simulation <- function(sim_num, save_results = TRUE) {
   # Simulate a phylogenetic tree
-  phy <- sim.bdtree(n = 250)
+  phy <- sim.bdtree(n = 50)
   phy$edge.length <- phy$edge.length / max(branching.times(phy))
   
   # Set up index matrix
@@ -31,28 +31,34 @@ run_simulation <- function(sim_num, save_results = TRUE) {
   cor_data <- get_formatted_data(sim_data$TipStates, index_mat)
   # table(cor_data$V2)
   # Run corHMM fits
-  corhmm_fit_l0 <- corHMM:::corHMMDredge(phy = phy, data = cor_data, max.rate.cat = 1, pen.type = "l1", root.p = "maddfitz", lambda = 0, grad = TRUE, merge.params = TRUE, drop.threshold = 1e-5)
-  corhmm_fit_l1 <- corHMM:::corHMMDredge(phy = phy, data = cor_data, max.rate.cat = 1, pen.type = "l1", root.p = "maddfitz", lambda = 1, grad = TRUE, merge.params = TRUE, drop.threshold = 1e-5)
-  corhmm_fit_l2 <- corHMM:::corHMMDredge(phy = phy, data = cor_data, max.rate.cat = 1, pen.type = "l2", root.p = "maddfitz", lambda = 1, grad = TRUE, merge.params = TRUE, drop.threshold = 1e-5)
-  corhmm_fit_er <- corHMM:::corHMMDredge(phy = phy, data = cor_data, max.rate.cat = 1, pen.type = "er", root.p = "maddfitz", lambda = 1, grad = TRUE, merge.params = TRUE, drop.threshold = 1e-5)
+  corhmm_fit_l0 <- corHMM:::corHMMDredge(phy = phy, data = cor_data, max.rate.cat = 1, pen.type = "l1", root.p = "maddfitz", lambda = 0)
+  corhmm_fit_l1 <- corHMM:::corHMMDredge(phy = phy, data = cor_data, max.rate.cat = 1, pen.type = "l1", root.p = "maddfitz", lambda = 1)
+  corhmm_fit_l2 <- corHMM:::corHMMDredge(phy = phy, data = cor_data, max.rate.cat = 1, pen.type = "l2", root.p = "maddfitz", lambda = 1)
+  corhmm_fit_er <- corHMM:::corHMMDredge(phy = phy, data = cor_data, max.rate.cat = 1, pen.type = "er", root.p = "maddfitz", lambda = 1)
+  corhmm_fit_SA <- corHMM:::corHMMDredgeSA(phy = phy, data = cor_data, max.rate.cat = 1, pen.type = "l1", root.p = "maddfitz", lambda = 1)
   
   # Select the best models
   best_l0 <- corhmm_fit_l0[[which.min(getModelTable(corhmm_fit_l0)$dAIC)]]
   best_l1 <- corhmm_fit_l1[[which.min(getModelTable(corhmm_fit_l1)$dAIC)]]
   best_l2 <- corhmm_fit_l2[[which.min(getModelTable(corhmm_fit_l2)$dAIC)]]
   best_er <- corhmm_fit_er[[which.min(getModelTable(corhmm_fit_er)$dAIC)]]
+  best_sa <- corhmm_fit_SA[[which.min(getModelTable(corhmm_fit_SA)$dAIC)]]
   
   # Generate the result dataframe
   result_df <- t(data.frame(
     l0 = model_test_ord(best_l0, index_mat),
     l1 = model_test_ord(best_l1, index_mat),
     l2 = model_test_ord(best_l2, index_mat),
-    er = model_test_ord(best_er, index_mat)
+    er = model_test_ord(best_er, index_mat),
+    sa = model_test_ord(best_sa, index_mat)
   ))
   
   # Save intermediate results if specified
   if (save_results) {
-    saveRDS(list(phy = phy, sim_data = sim_data, corhmm_fits = list(l0 = corhmm_fit_l0, l1 = corhmm_fit_l1, l2 = corhmm_fit_l2, er = corhmm_fit_er), result_df = result_df),
+    saveRDS(list(phy = phy, 
+      sim_data = sim_data, 
+      corhmm_fits = list(l0 = corhmm_fit_l0, l1 = corhmm_fit_l1, l2 = corhmm_fit_l2, er = corhmm_fit_er, sa = corhmm_fit_SA), 
+      result_df = result_df),
       file = paste0("~/corhmm-dredge/structure_results/ord_model/intermediate_results_sim_", sim_num, ".rds"))
   }
   
@@ -71,6 +77,7 @@ sim_nums <- 1:100
 
 # Run simulations in parallel
 # results <- mclapply(sim_nums, run_simulation, mc.cores = 10)
+
 results_files <- dir("~/corhmm-dredge/structure_results/ord_model/", full.names = TRUE)
 results <- lapply(results_files, readRDS)
 results <- lapply(results, "[[", "result_df")
@@ -82,10 +89,11 @@ result_df_all <- do.call(rbind, results)
 
 # how consistent are the results with the hypothesis?
 test_summ <- data.frame(
-  l0=colSums(result_df_all[rownames(result_df_all) == "l0",])/100,
-  l1=colSums(result_df_all[rownames(result_df_all) == "l1",])/100,
-  l2=colSums(result_df_all[rownames(result_df_all) == "l2",])/100,
-  er=colSums(result_df_all[rownames(result_df_all) == "er",])/100
+  l0=colSums(result_df_all[rownames(result_df_all) == "l0",])/(dim(result_df_all)[1]/5),
+  l1=colSums(result_df_all[rownames(result_df_all) == "l1",])/(dim(result_df_all)[1]/5),
+  l2=colSums(result_df_all[rownames(result_df_all) == "l2",])/(dim(result_df_all)[1]/5),
+  er=colSums(result_df_all[rownames(result_df_all) == "er",])/(dim(result_df_all)[1]/5),
+  sa=colSums(result_df_all[rownames(result_df_all) == "sa",])/(dim(result_df_all)[1]/5)
 )
 write.csv(test_summ, "tables/test_summary_ord.csv")
 
