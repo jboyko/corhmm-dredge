@@ -36,10 +36,11 @@ source("code/plot_SA_info.R")
 dev.off()
 
 
-model_table <- getModelTable(dredge_fitsSA$all_models)
+model_table <- getModelTable(dredge_fitsSA2$all_models)
 dredge_model <- dredge_fitsSA2$all_models[[8]]
 # k_fold_res <- kFoldCrossValidation(dredge_model, k = 5, lambdas = c(0,0.25,0.5,0.75,1))
 # saveRDS(k_fold_res, file = "empirical_results/empirical_kfold.RDS")
+dredge_model$states[1,]
 k_fold_res <- readRDS("empirical_results/empirical_kfold.RDS")
 cv_table <- getCVTable(k_fold_res)
 
@@ -57,7 +58,7 @@ dev.off()
 RColorBrewer::display.brewer.all()
 piecolors <- RColorBrewer::brewer.pal(8, "Paired")[c(2,8,6,4,1,7,5,3)]
 
-anc_recon <- ancRECON(phy = dredge_model$phy,
+anc_recon <- ancRECON(phy = dredge_model$phy, root.p = "maddfitz",
   data = dredge_model$data, 
   p = MatrixToPars(dredge_model), 
   method = "marginal", 
@@ -77,4 +78,5 @@ text(x = -1, y = 50, label = "Estrus display | Multimale mating",
   cex = 0.6, adj=0)
 dev.off()
 
-plot(phy, no.margin = TRUE, cex = 0.5)
+# plot(phy, no.margin = TRUE, cex = 0.5)
+plot(phy, show.tip.label = TRUE, cex = 0.5, direction = "downwards")
