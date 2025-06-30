@@ -31,7 +31,7 @@ results <- lapply(results, function(x)
 result_df_all <- do.call(rbind, results)
 
 # how consistent are the results with the hypothesis?
-test_summ <- t(data.frame(
+test_summ <- (data.frame(
   l0=colSums(result_df_all[rownames(result_df_all) == "l0",])/(dim(result_df_all)[1]/5),
   l1=colSums(result_df_all[rownames(result_df_all) == "l1",])/(dim(result_df_all)[1]/5),
   l2=colSums(result_df_all[rownames(result_df_all) == "l2",])/(dim(result_df_all)[1]/5),
@@ -78,13 +78,13 @@ results <- lapply(results, function(x)
 result_df_all <- do.call(rbind, results)
 
 # how consistent are the results with the hypothesis?
-test_summ <- data.frame(
+test_summ <- (data.frame(
   l0=colSums(result_df_all[rownames(result_df_all) == "l0",])/(dim(result_df_all)[1]/5),
   l1=colSums(result_df_all[rownames(result_df_all) == "l1",])/(dim(result_df_all)[1]/5),
   l2=colSums(result_df_all[rownames(result_df_all) == "l2",])/(dim(result_df_all)[1]/5),
   er=colSums(result_df_all[rownames(result_df_all) == "er",])/(dim(result_df_all)[1]/5),
   sa=colSums(result_df_all[rownames(result_df_all) == "sa",])/(dim(result_df_all)[1]/5)
-)
+))
 test_summ
 write.csv(test_summ, "tables/test_summary_ord.csv")
 
@@ -120,13 +120,13 @@ results <- lapply(results, function(x)
 result_df_all <- do.call(rbind, results)
 
 # how consistent are the results with the hypothesis?
-test_summ <- data.frame(
+test_summ <- (data.frame(
   l0=colSums(result_df_all[rownames(result_df_all) == "l0",], T)/(dim(result_df_all)[1]/5),
   l1=colSums(result_df_all[rownames(result_df_all) == "l1",], T)/(dim(result_df_all)[1]/5),
   l2=colSums(result_df_all[rownames(result_df_all) == "l2",], T)/(dim(result_df_all)[1]/5),
   er=colSums(result_df_all[rownames(result_df_all) == "er",], T)/(dim(result_df_all)[1]/5),
   sa=colSums(result_df_all[rownames(result_df_all) == "sa",], T)/(dim(result_df_all)[1]/5)
-)
+))
 test_summ
 write.csv(test_summ, "tables/test_summary_hmm.csv")
 round(test_summ, 3) * 100

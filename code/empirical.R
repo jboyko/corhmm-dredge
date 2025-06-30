@@ -8,17 +8,12 @@ phy <- multi2di(primates[[1]])
 phy$edge.length <- phy$edge.length + 1e-7
 data <- primates[[2]]
 
-plot(phy, show.tip.label = FALSE, direction = "downwards")
-tiplabels(pie = dredge_model$tip.states[,1:4], piecol = piecolors, cex = 0.35)
-legend("topright", legend = colnames(dredge_model$states)[1:4],
-  pch=21, pt.bg = piecolors[1:4], cex = 1, bty="n", title = "")
-
 # dredge_fits <- corHMMDredge(phy = phy, data = data, max.rate.cat = 1, 
 #   pen.type = "l1", root.p = "maddfitz", lambda = 1, nstarts = 10, n.cores = 10)
 
-dredge_fitsSA <- corHMMDredgeSA(phy = phy, data = data, max.rate.cat = 2,
-  pen.type = "l1", root.p = "maddfitz", lambda = 1, nstarts = 5, n.cores = 5,
-  verbose = TRUE, max.iterations = 500, return.all = TRUE, initial.temp = 4)
+# dredge_fitsSA <- corHMMDredgeSA(phy = phy, data = data, max.rate.cat = 2,
+#   pen.type = "l1", root.p = "maddfitz", lambda = 1, nstarts = 5, n.cores = 5,
+#   verbose = TRUE, max.iterations = 500, return.all = TRUE, initial.temp = 4)
 # saveRDS(dredge_fitsSA, file = "empirical_results/empirical.RDS")
 dredge_fitsSA <- readRDS("empirical_results/empirical.RDS")
 
