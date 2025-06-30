@@ -143,7 +143,8 @@ model_test_dep <- function(cor_obj, index_mat){
   # test_3 <- all(index_mat[order(Q, na.last = TRUE, decreasing = TRUE)[1:2]] == c(8,1)) #q1>q2>qij
   test_3 <- Q[index_mat == 5] == Q[index_mat == 7] # warm->cold == warm->cold (qx)
   test_4 <- Q[index_mat == 2] == Q[index_mat == 4] # cold->warm == cold->warm(qy)
-  return(c(test_1=test_1, test_2=test_2, test_3=test_3, test_4=test_4))
+  test_5 <- test_1 & test_2 & test_3 & test_4
+  return(c(test_1=test_1, test_2=test_2, test_3=test_3, test_4=test_4, test_5=test_5))
 }
 
 
@@ -152,7 +153,8 @@ model_test_ord <- function(cor_obj, index_mat){
   test_1 <- is.na(Q[1,3]) # must transition through intermediate?
   test_2 <- !is.na(Q[2,1]) & !is.na(Q[2,3]) # intermediate can go back and forward?
   test_3 <- all(is.na(Q[3,])) # final state cannot transition back 
-  test_4 <- max(cor_obj$index.mat, na.rm = TRUE) == 1 # equal rates for all
+  # test_4 <- max(cor_obj$index.mat, na.rm = TRUE) == 1 # equal rates for all
+  test_4 <- test_1 & test_2 & test_3 # test on all
   return(c(test_1=test_1, test_2=test_2, test_3=test_3, test_4=test_4))
 }
 
@@ -163,16 +165,19 @@ model_test_hmm <- function(cor_obj, index_mat){
     R1 <- mean(Q[c(1,2), c(1,2)], na.rm = TRUE) 
     R2 <- mean(Q[c(3,4), c(3,4)], na.rm = TRUE)
     test_2 <- sort(c(R1, R2))[2]/sort(c(R1, R2))[1] >= 100 # fast rate class 100x faster
+    if(is.na(test_2)){
+      test_2 <- TRUE # an NA is a rate of 0, so this test is undefined, but true
+    }
     fastest_rate <- sort(MatrixToPars(cor_obj), decreasing = TRUE)[1]
     rate_index <- which(Q == fastest_rate, arr.ind = TRUE)
     test_3 <- !any(abs(rate_index[,1] - rate_index[,2]) > 1) # fastest rate is observed trans
-    R1_sd <- sd(cor_obj$index.mat[c(1,2), c(1,2)], na.rm = TRUE)
-    R2_sd <- sd(cor_obj$index.mat[c(3,4), c(3,4)], na.rm = TRUE)
-    test_4 <- (R1_sd == 0) & (R2_sd == 0) # equal rates for both rate classes
+    # R1_sd <- sd(cor_obj$index.mat[c(1,2), c(1,2)], na.rm = TRUE)
+    # R2_sd <- sd(cor_obj$index.mat[c(3,4), c(3,4)], na.rm = TRUE)
+    # test_4 <- (R1_sd == 0) & (R2_sd == 0) # equal rates for both rate classes
   }else{
-    test_1=test_2=test_3=test_4 <- FALSE
+    test_1=test_2=test_3 <- FALSE
   }
-  return(c(test_1=test_1, test_2=test_2, test_3=test_3, test_4=test_4))
+  return(c(test_1=test_1, test_2=test_2, test_3=test_3))
 }
 
 

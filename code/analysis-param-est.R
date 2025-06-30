@@ -14,7 +14,7 @@ trees <- lapply(dir("trees/", full.names = TRUE), read.tree)
 phy <- trees[[1]]
 nSim = 100
 
-############### Simulation scenario 1 ####################
+############### Simulation scenario X ####################
 # which simulation number
 simulation <- "01"
 df_out <- list()
