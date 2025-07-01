@@ -1,5 +1,10 @@
 # corhmm-dredge
-Automatically search discrete character evolution models and regularize the parameter values
+**Automatic Discovery of Optimal Discrete Character Models**
+
+Automatically search discrete character evolution models and regularize parameter values using a combination of regularization and simulated annealing.
+
+## Overview
+This project implements automatic model selection for discrete character evolution in phylogenetic comparative methods. The "dredge" algorithm combines regularization techniques (L1, L2) with simulated annealing to optimize across different model structures without requiring user specification of model complexity.
 
 ## Simulation study and associated code
 Each simulation setting has an identifier following a '-' and has a corresponding dataset in /data/ and model fit in /fits/. I vary several parameters for each script in order to test a variety of empirically relavent scenarios. Rates of evolution and tree size are two of the varried parameters. We are also interested in detecting particular model types when the data structure allows. For example, we may be interested in testing for correlation when there are two or more characters in the dataset. Finally we need to vary the number of rate classes. 
@@ -20,6 +25,18 @@ The scripts runs three main simulation scenarios (1, 2, and 3-character models),
 *   `model`: The complexity of the generating model (`1Char`, `2Char`, `3Char`).
 
 ---
+
+### Results Organization
+- **Parameter Results** (`param_results/`): Estimates by regularization type (L1/L2/ER)
+- **Structure Results** (`structure_results/`): Model comparison outputs (dep_model, hmm_model, ord_model)
+- **Summary Tables** (`tables/`): Performance metrics and parameter comparisons
+- **Figures** (`figures/`, `plots/`): Publication-ready visualizations
+
+### Key Output Files
+- `parameter-comparison.csv`: Raw parameter estimates vs. true values
+- `stats-summary-by-type.csv`: Bias, variance, RMSE by regularization method
+- `propor-variance-by-type.csv`: Variance ratios relative to L0 baseline
+- Model-specific summaries by character complexity (1Char/2Char/3Char)
 
 ### File Descriptions
 
@@ -48,3 +65,4 @@ Provides summary statistics (mean, variance, median) grouped not just by `type` 
 
 #### `tables/par-summary-by-type-model.csv`
 Provides summary statistics (mean, variance, median) grouped by the complexity of the true underlying model (`1Char`, `2Char`, `3Char`), in addition to `ntips` and `type`. This helps assess how model complexity affects estimation accuracy.
+
